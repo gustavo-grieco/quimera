@@ -20,7 +20,11 @@ This is a basic tool that uses large language models (LLMs) to gradually discove
 
 # Installation
 
-To install, just clone and run `pip3 install .`
+To install, just run:
+
+```
+pip3 install https://github.com/gustavo-grieco/quimera/archive/refs/heads/main.zip
+```
 
 If you want to use [different LLM providers](https://llm.datasette.io/en/stable/plugins/directory.html#plugin-directory), you will need to install them as plugins. For instance, to install gemini and ollama support:
 
