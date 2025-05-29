@@ -9,7 +9,7 @@ extra_require = {
 setup(
     name="quimera",
     version="0.1",
-    description="",
+    description="Data-driven exploit generation for Ethereum smart contracts using LLMs and Foundry",
     long_description_content_type="text/markdown",
     long_description=open("README.md").read(),
     packages=[

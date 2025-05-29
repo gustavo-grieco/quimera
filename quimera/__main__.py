@@ -160,23 +160,47 @@ contract TestFlaw {
 """
 
 constraints = """
-* You have initially 1000 WETH available, but you don't have to use it all if you need it (depends on the liquidity available in token pair contract). Do not change this value, only use the part that you need.
+# Constraints
+
 * Do NOT use SafeMath
 * Do NOT use third-parties during exploit (e.g. the owner doing something for you) 
 * Do NOT use ETH directly, only use WETH
 * Do NOT use any cheat code (e.g prank)
+* Do NOT try to exploit underflows or overflow conditions unless the contract is using Solidity < 0.8.0 or unchecked block. It will not work.
 * Do NOT explain the reasoning, only answer with the `receiveFlashLoan` function. Do NOT repeat or modify the rest of the code.
 * Do NOT modify the surplus assertion
+* It is ABSOLUTELY essential to include this code at the end of the `receiveFlashLoan` function:
+```
+        WETH.transfer(address(balancerVault), amounts[0]);
+        uint256 surplusInETH = WETH.balanceOf(address(this));
+        console.log("Surplus: %s WETH", surplusInETH);
+        assert(surplusInETH > 0);
+```
+
+# Recommendations
+
+* Carefully review how tokens flows from this contract, to the Uniswap pair (and maybe passing through others), and back to this contract to repay the flash loan.
+* You have initially 1000 WETH available, but you don't have to use it all if you need it (depends on the liquidity available). Do not change this value, only use the part of the 1000 WETH that you need.
+* You start with no tokens, except WETH, so you must find a way to obtain the right tokens in order to trigger the flaw.
+* Near the end, you need to swap all your tokens to WETH. Be careful with transfer fees and other constraints. The exploit should be "capital efficient", in order to be detectable when repaying the flashloan.
+* Use `console.log` to query the state of the contracts, if needed. 
+* Keep the control flow of the exploit simple: do not use if conditions, only sequences of calls.
+* Try using different functions of the target contracts and evaluate the effects to see if they are useful for the exploit.
 """
 
 initial_prompt_template = """
-The following Ethereum smart contract has a flaw:
+# Instructions
+
+We are going to reproduce a Solidity smart contract issue step by step, incrementally modifying a Foundry test according to the information produced during its execution (e.g. a trace). This issue allows a user to start with a certain amount of WETH, perform some operations using the contract, and then obtain more WETH than the initial one.
+
+$constraints
+
+# Code to review
 ```
 $targetCode
 ```
 
-This flaw allows one to start with a certain amount of WETH, perform some operations using the contract, and then obtain more WETH than the initial one.
-In order to fix the issue, we need to understand it and build a proof of concept to reproduce it. We are going to build this iteratively, using foundry. I will give you some initial code and the foundry traces after each execution so you can improve the proof of concept:
+And the first Foundry trace is this one:
 
 ```
 $testCode
@@ -185,17 +209,15 @@ And the first foundry trace is this one:
 ```
 $trace
 ```
-
-Keep in mind the following constraints:
-$constraints
 """
 
 next_prompt_template = """
-The result of the last execution is this:
+The result of the last execution is:
 ```
 $trace
 ```
-Please improve the receiveFlashLoan function to fix the issue and make it work with the following constraints:
+Please improve the receiveFlashLoan function to fix the issue and make it work.
+
 $constraints
 """
 
@@ -499,7 +521,7 @@ def main() -> None:
 
         test_code = Template(test_contract_template).substitute(args)
         args["testCode"] = test_code
-        temp_dir = Path("/tmp", "foundry_sessions", target, str(iteration))
+        temp_dir = Path("/tmp", "quimera_foundry_sessions", target, str(iteration))
         args["trace"] = run_foundry(temp_dir, test_code)
         print(f"Trace/output: {args['trace']}")
         if (
