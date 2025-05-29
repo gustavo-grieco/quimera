@@ -14,7 +14,7 @@ This is a basic tool that uses large language models (LLMs) to gradually discove
 
 # Requirements
 
-* You will need an RPC provider (e.g. alchemy) and an Etherscan API key. Both have free options.
+* You will need an RPC provider (e.g. Alchemy) and an Etherscan API key. Both have free options.
 * An LLM service, either a local (e.g. ollama) or remote LLM service (e.g gemini). **You do not need to pay for an API access, specially if you use "manual mode"**
 * [Foundry](https://book.getfoundry.sh/)
 
@@ -29,18 +29,20 @@ llm install llm-gemini
 llm install llm-ollama
 ```
 
-Note that in "manual mode", there is no need to install any plugin as the user will be copying and pasting the code manually and there is no need for an API plugin for that.
+Note that in "manual mode", there is no need to install any plugin as the user will be copying and pasting the prompt and responses.
 
 
 # Getting started
 
-1. Modify the mainnet.sh file to add the RPC and etherscan keys.
+1. Modify the keys.sh file to add the RPC and Etherscan keys.
 2. Select a block number B and then execute `source keys.sh B"
 3. Invoke Quimera:
 
 ```
-quimera TARGET --iterations 5 --model manual
+quimera TARGET --model gpt-4o --iterations 5
 ```
+
+You can use `llm models` to show the available models.
 
 # Example session
 
@@ -48,11 +50,11 @@ This session shows the different steps to re-discover the [APEMAGA exploit](http
 While it is likely that this code is part of the millons used to train, Gemini does not seem to be immediately recalling the exploit from memory, but instead, it seems to be trying to understand the code (at least, in some degree).  
 
 ```
-$ source keys.sh 20175261
-$ quimera 0x56FF4AfD909AA66a1530fe69BF94c74e6D44500C --model manual --iterations 20
+source keys.sh 20175261
+quimera 0x56FF4AfD909AA66a1530fe69BF94c74e6D44500C --model manual --iterations 20
 ```
 
-Gemini 2.5 Pro Preview (05-06) was used in "manual mode", copying and pasting the prompt/answers. It took 5 attempts to reach a valid exploit. I omitted some steps where Gemini fixed some compilation errors or repeated the same output.
+Gemini 2.5 Pro Preview (05-06) was used in "manual mode" from [Google AI Studio](https://aistudio.google.com/) (which seem to be unlimited right now) copying and pasting the prompt/answers. It took 5 attempts to reach a valid exploit. I omitted some steps where Gemini fixed some compilation errors or repeated the same output.
 
 The first attempt correctly swaps tokens, triggers the `family` function which is root cause, and tries to swaps token back:
 
