@@ -6,6 +6,7 @@ from argparse import ArgumentParser, Namespace
 from logging import basicConfig, getLogger, INFO, WARNING
 from signal import SIGINT, SIGTERM
 from os import getenv
+from re import compile
 from sys import exit
 from pathlib import Path
 from shutil import rmtree
@@ -45,7 +46,7 @@ initial_receive_flash_loan_function = """
     ) external {
         // ADD CODE HERE
 
-        // DO NOT MODIFY THE FOLLOWING CODE 
+        // DO NOT MODIFY THE FOLLOWING CODE
         WETH.transfer(address(balancerVault), amounts[0]);
         uint256 surplusInETH = WETH.balanceOf(address(this));
         console.log("Surplus: %s WETH", surplusInETH);
@@ -138,11 +139,11 @@ contract TestFlaw {
         WETH.approve(target, type(uint256).max);
         ERC20(token).approve(target, type(uint256).max);
 
-        // Remove any previous WETH from the balance 
+        // Remove any previous WETH from the balance
         WETH.transfer(address(0x0), WETH.balanceOf(address(this)));
     }
 
-    function testFlaw() external {       
+    function testFlaw() external {
          // flashloan WETH from Balancer
         address[] memory tokens = new address[](1);
         tokens[0] = address(WETH);
@@ -152,7 +153,7 @@ contract TestFlaw {
 
         uint256 finalWethBalance = WETH.balanceOf(address(this));
         console.log("Initial balance %s", finalWethBalance);
-        balancerVault.flashLoan(address(this), tokens, amounts, "");        
+        balancerVault.flashLoan(address(this), tokens, amounts, "");
         console.log("Final balance %s", WETH.balanceOf(address(this)));
     }
     $receiveFlashLoanFunction
@@ -163,7 +164,7 @@ constraints = """
 # Constraints
 
 * Do NOT use SafeMath
-* Do NOT use third-parties during exploit (e.g. the owner doing something for you) 
+* Do NOT use third-parties during exploit (e.g. the owner doing something for you)
 * Do NOT use ETH directly, only use WETH
 * Do NOT use any cheat code (e.g prank)
 * Do NOT try to exploit underflows or overflow conditions unless the contract is using Solidity < 0.8.0 or unchecked block. It will not work.
@@ -183,7 +184,7 @@ constraints = """
 * You have initially 1000 WETH available, but you don't have to use it all if you need it (depends on the liquidity available). Do not change this value, only use the part of the 1000 WETH that you need.
 * You start with no tokens, except WETH, so you must find a way to obtain the right tokens in order to trigger the flaw.
 * Near the end, you need to swap all your tokens to WETH. Be careful with transfer fees and other constraints. The exploit should be "capital efficient", in order to be detectable when repaying the flashloan.
-* Use `console.log` to query the state of the contracts, if needed. 
+* Use `console.log` to query the state of the contracts, if needed.
 * Keep the control flow of the exploit simple: do not use if conditions, only sequences of calls.
 * Try using different functions of the target contracts and evaluate the effects to see if they are useful for the exploit.
 """
@@ -374,7 +375,7 @@ def main() -> None:
     api_key = getenv("ETHERSCAN_API_KEY")
     if api_key is None:
         raise ValueError("Please set the ETHERSCAN_API_KEY environment variable.")
-    
+
     if api_key == "TODO":
         raise ValueError(
             "Please set the ETHERSCAN_API_KEY environment variable to a valid API key."
@@ -538,6 +539,10 @@ def main() -> None:
         prompt = Template(next_prompt_template).substitute(args)
 
 
+def escape_ansi(line):
+    ansi_escape = compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
+    return ansi_escape.sub('', line)
+
 def run_foundry(temp_dir, test_code) -> None:
     """Sets up a temporary directory for the tests"""
     # Create a temporary directory valid for the session
@@ -578,7 +583,14 @@ def run_foundry(temp_dir, test_code) -> None:
         outfile.write(test_code)
 
     out = run(["forge", "test", "-vvv"], cwd=temp_dir, capture_output=True)
-    return out.stderr.decode() + "\n" + out.stdout.decode()
+
+    stdout = out.stdout.decode().strip()
+    stdout = escape_ansi(stdout)
+
+    stderr = out.stderr.decode().strip()
+    stderr = escape_ansi(stderr)
+
+    return stderr + "\n" + stdout
 
 
 if __name__ == "__main__":
