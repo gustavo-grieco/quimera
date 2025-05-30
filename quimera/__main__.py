@@ -274,15 +274,18 @@ def resolve_prompt(prompt):
 
     # Open nano to edit the prompt
     if platform == "darwin":
-        system("cat /tmp/quimera.prompt.txt | pbcopy")
+        # In general, shell=True is not recommended, but here only we use it to pipe the content to pbcopy (there is no other way)
+        run("cat /tmp/quimera.prompt.txt | pbcopy", shell=True)
     elif platform == "linux":
-        system("cat /tmp/quimera.prompt.txt | xclip -selection clipboard")
+        run(["xclip", "-selection", "clipboard", "-in", "/tmp/quimera.prompt.txt"], check=True)
     else:
         raise ValueError("Unsupported platform.")
-    system(
-        "echo 'Your current prompt was copied to the clipboard. Delete everything (alt + t), paste the response here, save (ctrl + o) and exit (ctrl + x)' > /tmp/quimera.answer.txt"
-    )
-    system("nano /tmp/quimera.answer.txt")
+    # overwrite the prompt with instructions
+    with open("/tmp/quimera.answer.txt", "w") as file:
+        file.write(
+            "Your current prompt was copied to the clipboard. Delete everything (alt + t), paste the response here, save (ctrl + o) and exit (ctrl + x)"
+        )
+    run(["nano", "/tmp/quimera.answer.txt"], check=True)
 
     # Read the modified prompt
     with open("/tmp/quimera.answer.txt", "r") as file:
