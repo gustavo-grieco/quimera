@@ -37,22 +37,14 @@ IMPLEMENTATION_SLOT = (
     "0x360894A13BA1A3210667C828492DB98DCA3E2076CC3735A920A3CA505D382BBC"
 )
 
-initial_receive_flash_loan_function = """
-    function receiveFlashLoan(
-        ERC20[] memory,
-        uint256[] memory amounts,
-        uint256[] memory,
-        bytes memory
-    ) external {
-        // ADD CODE HERE
-
-        // DO NOT MODIFY THE FOLLOWING CODE
-        WETH.transfer(address(balancerVault), amounts[0]);
-        uint256 surplusInETH = WETH.balanceOf(address(this));
-        console.log("Surplus: %s WETH", surplusInETH);
-        assert(surplusInETH > 0);
-    }
+initial_during_flashloan_function = """
+    function duringFlashLoan(uint256 amount) internal {}
 """
+
+initial_during_reenter_function = """
+    function duringReenter() internal {}
+"""
+
 
 test_contract_template = """
 // SPDX-License-Identifier: UNLICENSED
@@ -87,6 +79,7 @@ interface IUniswapV2Pair {
     function swap(uint256 amount0Out, uint256 amount1Out, address to, bytes memory data) external;
     function token0() external view returns (address);
     function token1() external view returns (address);
+    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
 }
 
 interface IUniswapV2Router {
@@ -146,6 +139,10 @@ contract TestFlaw {
         WETH.approve(target, type(uint256).max);
         ERC20(token).approve(target, type(uint256).max);
 
+        uint112 reserve0;
+        uint112 reserve1;
+        (reserve0, reserve1, ) = uniswapPair.getReserves();
+        console.log("Uniswap reserves: %d %d", reserve0, reserve1);
     }
 
     function testFlaw() external {
@@ -161,9 +158,27 @@ contract TestFlaw {
         balancerVault.flashLoan(address(this), tokens, amounts, "");
         console.log("Final balance %s", WETH.balanceOf(address(this)));
     }
-    $receiveFlashLoanFunction
 
-    receive() external payable {} // In case the contract needs to receive ETH
+    function receiveFlashLoan(
+        ERC20[] memory,
+        uint256[] memory amounts,
+        uint256[] memory,
+        bytes memory
+    ) external {
+        duringFlashLoan(amounts[0]);
+
+        console.log("Current WETH balance: %s WETH", WETH.balanceOf(address(this)));
+        WETH.transfer(address(balancerVault), amounts[0]);
+        uint256 surplusInETH = WETH.balanceOf(address(this));
+        console.log("Surplus: %s WETH", surplusInETH);
+        assert(surplusInETH > 0);
+    }
+
+    $exploitCode
+
+    receive() external payable {
+        duringReenter();
+    }
 }
 """
 
@@ -174,15 +189,8 @@ constraints = """
 * Do NOT use third-parties during exploit (e.g. the owner doing something for you)
 * Do NOT use any cheat code (e.g prank)
 * Do NOT try to exploit underflows or overflow conditions unless the contract is using Solidity < 0.8.0 or unchecked block. It will not work.
-* Do NOT explain the reasoning, only answer with the `receiveFlashLoan` function. Do NOT repeat or modify the rest of the code.
-* Do NOT modify the surplus assertion
-* It is ABSOLUTELY essential to include this code at the end of the `receiveFlashLoan` function:
-```
-        WETH.transfer(address(balancerVault), amounts[0]);
-        uint256 surplusInETH = WETH.balanceOf(address(this));
-        console.log("Surplus: %s WETH", surplusInETH);
-        assert(surplusInETH > 0);
-```
+* Do NOT explain the reasoning, only answer with the `duringFlashloan` and `duringReenter` internal functions. Do NOT repeat or modify the rest of the code.
+* Use an empty `duringReenter` definition if reentrancy is not needed.
 
 # Recommendations
 
@@ -477,7 +485,7 @@ def main() -> None:
     args["constraints"] = constraints
     args["wethAddress"] = get_weth_address("mainnet")
     args["uniswapRouterAddress"] = get_uniswap_router_address("mainnet")
-    args["receiveFlashLoanFunction"] = initial_receive_flash_loan_function
+    args["exploitCode"] = initial_during_flashloan_function + initial_during_reenter_function
 
     test_code = Template(test_contract_template).substitute(args)
     args["testCode"] = test_code
@@ -517,13 +525,13 @@ def main() -> None:
                     print("Execution interrupted by user.")
                     exit(1)
 
-        args["receiveFlashLoanFunction"] = response.strip()
-        if "```" in args["receiveFlashLoanFunction"]:
-            args["receiveFlashLoanFunction"] = args["receiveFlashLoanFunction"].replace(
+        args["exploitCode"] = response.strip()
+        if "```" in args["exploitCode"]:
+            args["exploitCode"] = args["exploitCode"].replace(
                 "solidity", ""
             )
             # Remove the code block markers
-            args["receiveFlashLoanFunction"] = args["receiveFlashLoanFunction"].split(
+            args["exploitCode"] = args["exploitCode"].split(
                 "```"
             )[1]
 
