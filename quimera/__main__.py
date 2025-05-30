@@ -120,6 +120,10 @@ contract TestFlaw {
     IBalancerVault private constant balancerVault = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
     function setUp() public {
+        // Remove any previous WETH/ETH from the balance
+        WETH.transfer(address(0x0), WETH.balanceOf(address(this)));
+        payable(address(0)).transfer(address(this).balance);
+
         token = $tokenAddress;
         if (token == address(0))
             revert("Token address is zero");
@@ -127,8 +131,11 @@ contract TestFlaw {
         IUniswapV2Factory uniswapFactory = IUniswapV2Factory(uniswapRouter.factory());
         uniswapPair = IUniswapV2Pair(uniswapFactory.getPair(address(WETH), token));
 
-        if (WETH.balanceOf(address(uniswapPair)) < 1 ether)
-            revert("Not enough WETH in pair");
+        if (address(uniswapPair) == address(0))
+            return;
+
+        //if (WETH.balanceOf(address(uniswapPair)) < 1 ether)
+        //    revert("Not enough WETH in pair");
 
         token0 = uniswapPair.token0();
         token1 = uniswapPair.token1();
@@ -139,8 +146,6 @@ contract TestFlaw {
         WETH.approve(target, type(uint256).max);
         ERC20(token).approve(target, type(uint256).max);
 
-        // Remove any previous WETH from the balance
-        WETH.transfer(address(0x0), WETH.balanceOf(address(this)));
     }
 
     function testFlaw() external {
@@ -157,6 +162,8 @@ contract TestFlaw {
         console.log("Final balance %s", WETH.balanceOf(address(this)));
     }
     $receiveFlashLoanFunction
+
+    receive() external payable {} // In case the contract needs to receive ETH
 }
 """
 
@@ -165,7 +172,6 @@ constraints = """
 
 * Do NOT use SafeMath
 * Do NOT use third-parties during exploit (e.g. the owner doing something for you)
-* Do NOT use ETH directly, only use WETH
 * Do NOT use any cheat code (e.g prank)
 * Do NOT try to exploit underflows or overflow conditions unless the contract is using Solidity < 0.8.0 or unchecked block. It will not work.
 * Do NOT explain the reasoning, only answer with the `receiveFlashLoan` function. Do NOT repeat or modify the rest of the code.
@@ -183,6 +189,7 @@ constraints = """
 * Carefully review how tokens flows from this contract, to the Uniswap pair (and maybe passing through others), and back to this contract to repay the flash loan.
 * You have initially 1000 WETH available, but you don't have to use it all if you need it (depends on the liquidity available). Do not change this value, only use the part of the 1000 WETH that you need.
 * You start with no tokens, except WETH, so you must find a way to obtain the right tokens in order to trigger the flaw.
+* If you need ETH, unwrap WETH to ETH using the `WETH.withdraw` function.
 * Near the end, you need to swap all your tokens to WETH. Be careful with transfer fees and other constraints. The exploit should be "capital efficient", in order to be detectable when repaying the flashloan.
 * Use `console.log` to query the state of the contracts, if needed.
 * Keep the control flow of the exploit simple: do not use if conditions, only sequences of calls.
