@@ -280,7 +280,7 @@ def resolve_prompt(prompt):
     else:
         raise ValueError("Unsupported platform.")
     system(
-        "echo 'Your current prompt was copied to the clipboard. Delete this line (ctrl + k), paste the response here, save (ctrl + o) and exit (ctrl + x)' > /tmp/quimera.answer.txt"
+        "echo 'Your current prompt was copied to the clipboard. Delete everything (alt + t), paste the response here, save (ctrl + o) and exit (ctrl + x)' > /tmp/quimera.answer.txt"
     )
     system("nano /tmp/quimera.answer.txt")
 
