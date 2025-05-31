@@ -94,9 +94,6 @@ interface IUniswapV2Router {
         uint256 deadline
     ) external;
 
-    function getAmountsIn(address factory, uint amountOut, address[] memory path) external view returns (uint[] memory amounts);
-    function getAmountsOut(uint amountIn, address[] memory path) external view returns (uint[] memory amounts);
-
     function swapExactETHForTokensSupportingFeeOnTransferTokens(
         uint amountOutMin,
         address[] calldata path,
@@ -205,6 +202,7 @@ contract TestFlaw {
 constraints = """
 # Constraints
 
+* Do NOT guess the internal behavior of the contract, instead use the information provided by the trace, which is always accurate.
 * Do NOT use SafeMath
 * Do NOT use third-parties during exploit (e.g. the owner doing something for you)
 * Do NOT use any cheat code (e.g prank)
