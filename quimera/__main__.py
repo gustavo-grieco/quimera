@@ -3,7 +3,7 @@
 
 import asyncio
 from argparse import ArgumentParser, Namespace
-from logging import basicConfig, getLogger, INFO, WARNING
+from logging import basicConfig, getLogger, INFO, WARNING, ERROR
 from signal import SIGINT, SIGTERM
 from os import getenv
 from re import compile
@@ -402,7 +402,7 @@ def main() -> None:
     installed = check_commands_installed(["forge", "nano"])
     for cmd, installed in installed.items():
         if not installed:
-            print(f"Error: {cmd} is not installed. Please install it to continue.")
+            logger.log(ERROR, f"Error: {cmd} is not installed. Please install it to continue.")
             exit(1)
 
     target = args.contract_source
@@ -538,8 +538,10 @@ def main() -> None:
     args["testCode"] = test_code
 
     temp_dir = Path("/tmp", "quimera_foundry_sessions", target, "0")
-    args["trace"] = run_foundry(temp_dir, test_code)
+    args["trace"] = install_and_run_foundry(temp_dir, test_code)
     prompt = Template(initial_prompt_template).substitute(args)
+
+    save_prompt_response(prompt, None, temp_dir)
 
     model = None
     conversation = None
@@ -549,9 +551,9 @@ def main() -> None:
         conversation = model.conversation()
 
     for iteration in range(1, max_iterations + 1):
-        print(f"Iteration {iteration}")
-        print(f"Prompt: {prompt}")
-        print("Getting response from model...")
+        logger.log(INFO, f"Iteration {iteration}")
+        logger.log(INFO, f"Prompt: {prompt}")
+        logger.log(INFO, "Getting response from model...")
         response = None
 
         while response is None:
@@ -585,34 +587,47 @@ def main() -> None:
         test_code = Template(test_contract_template).substitute(args)
         args["testCode"] = test_code
         temp_dir = Path("/tmp", "quimera_foundry_sessions", target, str(iteration))
-        args["trace"] = run_foundry(temp_dir, test_code)
-        print(f"Trace/output: {args['trace']}")
+        args["trace"] = install_and_run_foundry(temp_dir, test_code)
+        save_prompt_response(prompt, response, temp_dir)
+        logger.log(INFO, f"Trace/output: {args['trace']}")
         if (
             "Suite result: FAILED" in args["trace"]
             or "Compiler run failed" in args["trace"]
         ):
-            print("Test failed, continuing to next iteration...")
+            logger.log(INFO, "Test failed, continuing to next iteration...")
         elif "[PASS] testFlaw()" in args["trace"]:
-            print("Test passed, profit was found! 🎉")
+            logger.log(INFO, "Test passed, profit was found! 🎉")
             exit(0)
         else:
             assert False, "Test result is not clear, please check the output."
 
         prompt = Template(next_prompt_template).substitute(args)
 
+def save_prompt_response(prompt, response, temp_dir):
+    """Saves the prompt and response to a file in the temporary directory."""
+    if not temp_dir.exists():
+        temp_dir.mkdir(parents=True, exist_ok=True)
+
+    if prompt is not None:
+        with open(temp_dir / "prompt.txt", "w", encoding="utf-8") as prompt_file:
+            prompt_file.write(prompt)
+
+    if response is not None:
+        with open(temp_dir / "response.txt", "w", encoding="utf-8") as response_file:
+            response_file.write(response)
 
 def escape_ansi(line):
     ansi_escape = compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
     return ansi_escape.sub('', line)
 
-def run_foundry(temp_dir, test_code) -> None:
+def install_and_run_foundry(temp_dir, test_code) -> None:
     """Sets up a temporary directory for the tests"""
     # Create a temporary directory valid for the session
     if temp_dir.exists():
         rmtree(temp_dir)
     temp_dir.mkdir(parents=True, exist_ok=True)
 
-    print("Installing Forge...")
+    logger.log(INFO, "Installing Forge...")
     # Install forget, supressing output
     run(["forge", "init", "--no-git"], check=True, cwd=temp_dir, capture_output=True)
 
@@ -644,6 +659,7 @@ def run_foundry(temp_dir, test_code) -> None:
     with open(temp_dir / "test" / "Test.t.sol", "w", encoding="utf-8") as outfile:
         outfile.write(test_code)
 
+    logger.log(INFO, "Running Forge test...")
     out = run(["forge", "test", "-vvv"], cwd=temp_dir, capture_output=True)
 
     stdout = out.stdout.decode().strip()
