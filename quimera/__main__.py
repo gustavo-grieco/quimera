@@ -3,6 +3,7 @@
 
 import asyncio
 from argparse import ArgumentParser, Namespace
+from datetime import datetime
 from logging import basicConfig, getLogger, INFO, WARNING, ERROR
 from signal import SIGINT, SIGTERM
 from os import getenv
@@ -615,6 +616,10 @@ def save_prompt_response(prompt, response, temp_dir):
     if response is not None:
         with open(temp_dir / "response.txt", "w", encoding="utf-8") as response_file:
             response_file.write(response)
+
+    # save date and time in a timestamp.txt file
+    with open(temp_dir / "timestamp.txt", "w", encoding="utf-8") as timestamp_file:
+        timestamp_file.write(datetime.now().isoformat())
 
 def escape_ansi(line):
     ansi_escape = compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
