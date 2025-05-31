@@ -23,10 +23,11 @@ from llm import get_async_model
 from llm.errors import ModelError
 from eth_utils import to_checksum_address
 
-from crytic_compile import cryticparser
 from slither import Slither
-from slither.tools.read_storage.read_storage import RpcInfo
+from slither.tools.read_storage import read_storage
+from slither.tools.read_storage.read_storage import SlitherReadStorage, RpcInfo
 from slither.utils.code_generation import generate_interface
+from slither.core.solidity_types.elementary_type import ElementaryType
 
 basicConfig()
 logger = getLogger("Quimera")
@@ -90,6 +91,24 @@ interface IUniswapV2Router {
         address[] calldata path,
         address to,
         uint256 deadline
+    ) external;
+
+    function getAmountsIn(address factory, uint amountOut, address[] memory path) external view returns (uint[] memory amounts);
+    function getAmountsOut(uint amountIn, address[] memory path) external view returns (uint[] memory amounts);
+
+    function swapExactETHForTokensSupportingFeeOnTransferTokens(
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external payable;
+
+    function swapExactTokensForETHSupportingFeeOnTransferTokens(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
     ) external;
 }
 
@@ -216,6 +235,9 @@ $constraints
 $targetCode
 ```
 
+The contract has a number of private variables that are not accessible, these are their current values:
+$privateVariablesValues
+
 And the first Foundry trace is this one:
 
 ```
@@ -224,8 +246,7 @@ $testCode
 And the first foundry trace is this one:
 ```
 $trace
-```
-"""
+```"""
 
 next_prompt_template = """
 The result of the last execution is:
@@ -480,12 +501,35 @@ def main() -> None:
         include_structs=True,
     )
 
+    srs = SlitherReadStorage([_contract], max_depth=20, rpc_info=rpc_info)
+    srs.storage_address = target
+
+    private_vars = []
+    for var in _contract.state_variables:
+        #if var.is_internal:
+        if not (isinstance(var.type, ElementaryType) and var.type.name in ["uint256", "bool"]):
+            continue
+
+        if var.visibility == "public":
+            continue
+        private_vars.append(var.name)
+
+    read_storage.logger.disabled = True
+    srs.get_all_storage_variables(lambda x: x.name in private_vars)
+    srs.get_target_variables()
+    srs.walk_slot_info(srs.get_slot_values)
+
+    private_variables_values = ""
+    for var in srs.slot_info.values():
+        private_variables_values += f"{var.name} = {var.value}\n"
+
     args = {}
     args["interface"] = interface
     args["targetCode"] = target_code
     args["targetAddress"] = target
     args["tokenAddress"] = token_address
     args["constraints"] = constraints
+    args["privateVariablesValues"] = private_variables_values
     args["wethAddress"] = get_weth_address("mainnet")
     args["uniswapRouterAddress"] = get_uniswap_router_address("mainnet")
     args["exploitCode"] = initial_during_flashloan_function + initial_during_reenter_function
