@@ -481,6 +481,19 @@ def main() -> None:
     target_code = _contract.compilation_unit.core.source_code[
         src_mapping.filename.absolute
     ]
+
+    if len(_contract.compilation_unit.core.source_code) > 1:
+        for c in _contract.inheritance:
+            if c.is_abstract:
+                continue
+            if c.is_interface:
+                continue
+            print(f"Contract {c.name} has {len(c.functions_entry_points)} entry points.")
+            src_mapping = c.source_mapping
+            target_code += "\n" + c.compilation_unit.core.source_code[
+                src_mapping.filename.absolute
+            ]
+
     # if _contract.is_erc4626:
     #    token_address = f"I{_contract.name}({target}).asset()"
     if _contract.is_erc20:
