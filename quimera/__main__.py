@@ -64,7 +64,7 @@ interface IWETH {
     function balanceOf(address) external view returns (uint256);
 }
 
-interface ERC20 {
+interface IERC20 {
     function approve(address guy, uint256 wad) external returns (bool);
     function balanceOf(address) external view returns (uint256);
     function transfer(address to, uint256 value) external returns (bool);
@@ -160,10 +160,10 @@ contract TestFlaw {
         token1 = uniswapPair.token1();
 
         WETH.approve(address(uniswapRouter), type(uint256).max);
-        ERC20(token).approve(address(uniswapRouter), type(uint256).max);
+        IERC20(token).approve(address(uniswapRouter), type(uint256).max);
 
         WETH.approve(target, type(uint256).max);
-        ERC20(token).approve(target, type(uint256).max);
+        IERC20(token).approve(target, type(uint256).max);
 
         uint112 reserve0;
         uint112 reserve1;
@@ -417,7 +417,7 @@ def get_flashloan_receiver(chain):
     if chain == "mainnet":
         return """
     function receiveFlashLoan(
-        ERC20[] memory,
+        IERC20[] memory,
         uint256[] memory amounts,
         uint256[] memory,
         bytes memory
