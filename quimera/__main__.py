@@ -119,6 +119,15 @@ interface IBalancerVault {
     ) external;
 }
 
+interface IDODO {
+    function flashLoan(
+        uint256 loanAmount,
+        uint256 feeAmount,
+        address receiver,
+        bytes calldata data
+    ) external;
+}
+
 contract TestFlaw {
     address internal target = $targetAddress;
     address internal token0;
@@ -127,7 +136,7 @@ contract TestFlaw {
     IUniswapV2Router internal uniswapRouter = IUniswapV2Router($uniswapRouterAddress);
     IUniswapV2Pair internal uniswapPair;
     IWETH private constant WETH = IWETH($wethAddress);
-    IBalancerVault private constant balancerVault = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+    address private flashloanProvider = $flashloanAddress;
 
     function setUp() public {
         // Remove any previous WETH/ETH from the balance
@@ -168,24 +177,21 @@ contract TestFlaw {
         tokens[0] = address(WETH);
 
         uint256[] memory amounts = new uint256[](1);
-        amounts[0] = 1000 ether;
+        amounts[0] = WETH.balanceOf(flashloanProvider);
+
+        console.log("Flashloaning %s wei", amounts[0]);
 
         uint256 finalWethBalance = WETH.balanceOf(address(this));
         console.log("Initial balance %s", finalWethBalance);
-        balancerVault.flashLoan(address(this), tokens, amounts, "");
+        $flashloanCall
         console.log("Final balance %s", WETH.balanceOf(address(this)));
     }
 
-    function receiveFlashLoan(
-        ERC20[] memory,
-        uint256[] memory amounts,
-        uint256[] memory,
-        bytes memory
-    ) external {
-        duringFlashLoan(amounts[0]);
+    $flashloanReceiver
+        duringFlashLoan(amount);
 
         console.log("Current WETH balance: %s WETH", WETH.balanceOf(address(this)));
-        WETH.transfer(address(balancerVault), amounts[0]);
+        WETH.transfer(flashloanProvider, amount);
         uint256 surplusInETH = WETH.balanceOf(address(this));
         console.log("Surplus: %s WETH", surplusInETH);
         assert(surplusInETH > 0);
@@ -203,6 +209,7 @@ constraints = """
 # Constraints
 
 * Do NOT guess the internal behavior of the contract, instead use the information provided by the trace, which is always accurate.
+* Do NOT predict the trace output, you need to run the test and check the output.
 * Do NOT use SafeMath
 * Do NOT use third-parties during exploit (e.g. the owner doing something for you)
 * Do NOT use any cheat code (e.g prank)
@@ -386,10 +393,43 @@ def get_uniswap_router_address(chain):
     if chain == "mainnet":
         return "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
     elif chain == "bsc":
-        return "0x05fF7c8D4dF7E9C8F6eB2cA3E1D3dF6C4eD1d7e5"
+        return "0x10ED43C718714eb63d5aA57B78B54704E256024E"
     else:
         raise ValueError("Unsupported chain")
 
+def get_flashloan_provider(chain):
+    if chain == "mainnet":
+        return "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
+    elif chain == "bsc":
+        return "0x6098A5638d8D7e9Ed2f952d35B2b67c34EC6B476"
+    else:
+        raise ValueError("Unsupported chain")
+
+def get_flashloan_call(chain):
+    if chain == "mainnet":
+        return "IBalancerVault(flashloanProvider).flashLoan(address(this), tokens, amounts, "");"
+    elif chain == "bsc":
+        return "IDODO(flashloanProvider).flashLoan(amounts[0], 0, address(this), \"0x0\");"
+    else:
+        raise ValueError("Unsupported chain")
+
+def get_flashloan_receiver(chain):
+    if chain == "mainnet":
+        return """
+    function receiveFlashLoan(
+        ERC20[] memory,
+        uint256[] memory amounts,
+        uint256[] memory,
+        bytes memory
+    ) external {
+        uint256 amount = amounts[0];
+    """
+    elif chain == "bsc":
+        return """
+    function DPPFlashLoanCall(address, uint256 amount, uint256, bytes memory) external {
+    """
+    else:
+        raise ValueError("Unsupported chain")
 
 def check_commands_installed(commands):
     return {cmd: which(cmd) is not None for cmd in commands}
@@ -405,6 +445,11 @@ def main() -> None:
             exit(1)
 
     target = args.contract_source
+    chain = "mainnet"
+    if ":" in target:
+        chain = target.split(":")[0]
+        target = target.split(":")[1]
+
     target = to_checksum_address(target)
 
     model_name = args.model
@@ -437,13 +482,13 @@ def main() -> None:
             INFO, f"Using block number {block_number} from command line argument."
         )
 
-    rpc_url = getenv("FOUNDRY_ETH_RPC_URL")
+    rpc_url = getenv("FOUNDRY_RPC_URL")
     if rpc_url is None:
-        raise ValueError("Please set the FOUNDRY_ETH_RPC_URL environment variable.")
+        raise ValueError("Please set the FOUNDRY_RPC_URL environment variable.")
 
-    block_timestamp = get_block_timestamp(block_number, api_key)
-    if block_timestamp is None:
-        raise ValueError("Failed to get block timestamp.")
+    #block_timestamp = get_block_timestamp(block_number, api_key)
+    #if block_timestamp is None:
+    #    raise ValueError("Failed to get block timestamp.")
 
     rpc_info = RpcInfo(rpc_url, int(block_number))
     impl_raw = rpc_info.web3.eth.get_storage_at(target, IMPLEMENTATION_SLOT)
@@ -453,7 +498,7 @@ def main() -> None:
         target = to_checksum_address(target)
         logger.log(INFO, f"Proxy detected, using target address {target}")
 
-    slither = Slither(target, **vars(args))
+    slither = Slither(chain + ":" + target, **vars(args))
 
     # get all the contracts names
     contracts = slither.contracts
@@ -466,6 +511,9 @@ def main() -> None:
         max_functions = 0
         for contract in contracts:
             if contract.is_abstract:
+                continue
+
+            if contract.is_interface:
                 continue
 
             number_entry_points = len(contract.functions_entry_points)
@@ -541,16 +589,21 @@ def main() -> None:
     args["targetAddress"] = target
     args["tokenAddress"] = token_address
     args["constraints"] = constraints
+
+    args["flashloanAddress"] = get_flashloan_provider(chain)
+    args["flashloanCall"] = get_flashloan_call(chain)
+    args["flashloanReceiver"] = get_flashloan_receiver(chain)
+
     args["privateVariablesValues"] = private_variables_values
-    args["wethAddress"] = get_weth_address("mainnet")
-    args["uniswapRouterAddress"] = get_uniswap_router_address("mainnet")
+    args["wethAddress"] = get_weth_address(chain)
+    args["uniswapRouterAddress"] = get_uniswap_router_address(chain)
     args["exploitCode"] = initial_during_flashloan_function + initial_during_reenter_function
 
     test_code = Template(test_contract_template).substitute(args)
     args["testCode"] = test_code
 
     temp_dir = Path("/tmp", "quimera_foundry_sessions", target, "0")
-    args["trace"] = install_and_run_foundry(temp_dir, test_code)
+    args["trace"] = install_and_run_foundry(temp_dir, test_code, rpc_url)
     prompt = Template(initial_prompt_template).substitute(args)
 
     save_prompt_response(prompt, None, temp_dir)
@@ -599,7 +652,7 @@ def main() -> None:
         test_code = Template(test_contract_template).substitute(args)
         args["testCode"] = test_code
         temp_dir = Path("/tmp", "quimera_foundry_sessions", target, str(iteration))
-        args["trace"] = install_and_run_foundry(temp_dir, test_code)
+        args["trace"] = install_and_run_foundry(temp_dir, test_code, rpc_url)
         save_prompt_response(prompt, response, temp_dir)
         logger.log(INFO, f"Trace/output: {args['trace']}")
         if (
@@ -636,7 +689,7 @@ def escape_ansi(line):
     ansi_escape = compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
     return ansi_escape.sub('', line)
 
-def install_and_run_foundry(temp_dir, test_code) -> None:
+def install_and_run_foundry(temp_dir, test_code, rpc_url) -> None:
     """Sets up a temporary directory for the tests"""
     # Create a temporary directory valid for the session
     if temp_dir.exists():
@@ -676,7 +729,7 @@ def install_and_run_foundry(temp_dir, test_code) -> None:
         outfile.write(test_code)
 
     logger.log(INFO, "Running Forge test...")
-    out = run(["forge", "test", "-vvv"], cwd=temp_dir, capture_output=True)
+    out = run(["forge", "test", "--fork-url", rpc_url, "-vvv"], cwd=temp_dir, capture_output=True)
 
     stdout = out.stdout.decode().strip()
     stdout = escape_ansi(stdout)
