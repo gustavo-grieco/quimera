@@ -43,10 +43,6 @@ initial_during_flashloan_function = """
     function duringFlashLoan(uint256 amount) internal {}
 """
 
-initial_during_reenter_function = """
-    function duringReenter() internal {}
-"""
-
 
 test_contract_template = """
 // SPDX-License-Identifier: UNLICENSED
@@ -198,10 +194,6 @@ contract TestFlaw {
     }
 
     $exploitCode
-
-    receive() external payable {
-        duringReenter();
-    }
 }
 """
 
@@ -214,8 +206,8 @@ constraints = """
 * Do NOT use third-parties during exploit (e.g. the owner doing something for you)
 * Do NOT use any cheat code (e.g prank)
 * Do NOT try to exploit underflows or overflow conditions unless the contract is using Solidity < 0.8.0 or unchecked block. It will not work.
-* Do NOT explain the reasoning, only answer with the `duringFlashloan` and `duringReenter` internal functions. Do NOT repeat or modify the rest of the code.
-* Use an empty `duringReenter` definition if reentrancy is not needed.
+* Do NOT explain the reasoning, only answer with the `duringFlashloan` and optionally the `receive` function (if needed) or any external function for callbacks/reentrancy.
+* Do NOT repeat or modify the rest of the code.
 
 # Recommendations
 
@@ -597,7 +589,7 @@ def main() -> None:
     args["privateVariablesValues"] = private_variables_values
     args["wethAddress"] = get_weth_address(chain)
     args["uniswapRouterAddress"] = get_uniswap_router_address(chain)
-    args["exploitCode"] = initial_during_flashloan_function + initial_during_reenter_function
+    args["exploitCode"] = initial_during_flashloan_function
 
     test_code = Template(test_contract_template).substitute(args)
     args["testCode"] = test_code
