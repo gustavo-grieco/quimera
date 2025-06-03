@@ -3,8 +3,7 @@
 
 
 from argparse import ArgumentParser, Namespace
-from datetime import datetime
-from logging import basicConfig, getLogger, INFO, WARNING, ERROR
+from logging import basicConfig, getLogger, INFO, ERROR
 from os import getenv
 from sys import exit
 from pathlib import Path
@@ -22,7 +21,7 @@ from quimera.chains import (
     get_uniswap_router_address,
     get_flashloan_provider,
     get_flashloan_call,
-    get_flashloan_receiver
+    get_flashloan_receiver,
 )
 
 from quimera.prompt import (
@@ -30,7 +29,7 @@ from quimera.prompt import (
     next_prompt_template,
     initial_during_flashloan_function,
     test_contract_template,
-    constraints
+    constraints,
 )
 
 from quimera.foundry import install_and_run_foundry
@@ -40,6 +39,7 @@ from quimera.contract import get_contract_info
 basicConfig()
 logger = getLogger("Quimera")
 logger.setLevel(INFO)
+
 
 def parse_args() -> Namespace:
     """
@@ -94,8 +94,10 @@ def get_block_timestamp(block_number, api_key):
     timestamp = int(data["result"]["timeStamp"])
     return timestamp
 
+
 def check_commands_installed(commands):
     return {cmd: which(cmd) is not None for cmd in commands}
+
 
 def main() -> None:
     args = parse_args()
@@ -103,7 +105,9 @@ def main() -> None:
     installed = check_commands_installed(["forge", "nano"])
     for cmd, installed in installed.items():
         if not installed:
-            logger.log(ERROR, f"Error: {cmd} is not installed. Please install it to continue.")
+            logger.log(
+                ERROR, f"Error: {cmd} is not installed. Please install it to continue."
+            )
             exit(1)
 
     target = args.contract_source
@@ -111,7 +115,6 @@ def main() -> None:
     if ":" in target:
         chain = target.split(":")[0]
         target = target.split(":")[1]
-
 
     model_name = args.model
     max_iterations = args.iterations
@@ -147,8 +150,8 @@ def main() -> None:
     if rpc_url is None:
         raise ValueError("Please set the FOUNDRY_RPC_URL environment variable.")
 
-    #block_timestamp = get_block_timestamp(block_number, api_key)
-    #if block_timestamp is None:
+    # block_timestamp = get_block_timestamp(block_number, api_key)
+    # if block_timestamp is None:
     #    raise ValueError("Failed to get block timestamp.")
 
     contract_info = get_contract_info(
@@ -159,17 +162,17 @@ def main() -> None:
         args,
     )
     args = {}
-    args["interface"] = contract_info['interface']
-    args["targetCode"] = contract_info['target_code']
-    args["targetAddress"] = contract_info['target_address']
-    args["tokenAddress"] = contract_info['token_address']
+    args["interface"] = contract_info["interface"]
+    args["targetCode"] = contract_info["target_code"]
+    args["targetAddress"] = contract_info["target_address"]
+    args["tokenAddress"] = contract_info["token_address"]
     args["constraints"] = constraints
 
     args["flashloanAddress"] = get_flashloan_provider(chain)
     args["flashloanCall"] = get_flashloan_call(chain)
     args["flashloanReceiver"] = get_flashloan_receiver(chain)
 
-    args["privateVariablesValues"] = contract_info['private_variables_values']
+    args["privateVariablesValues"] = contract_info["private_variables_values"]
     args["wethAddress"] = get_weth_address(chain)
     args["uniswapRouterAddress"] = get_uniswap_router_address(chain)
     args["exploitCode"] = initial_during_flashloan_function
@@ -216,13 +219,9 @@ def main() -> None:
 
         args["exploitCode"] = response.strip()
         if "```" in args["exploitCode"]:
-            args["exploitCode"] = args["exploitCode"].replace(
-                "solidity", ""
-            )
+            args["exploitCode"] = args["exploitCode"].replace("solidity", "")
             # Remove the code block markers
-            args["exploitCode"] = args["exploitCode"].split(
-                "```"
-            )[1]
+            args["exploitCode"] = args["exploitCode"].split("```")[1]
 
         test_code = Template(test_contract_template).substitute(args)
         args["testCode"] = test_code
@@ -242,6 +241,7 @@ def main() -> None:
             assert False, "Test result is not clear, please check the output."
 
         prompt = Template(next_prompt_template).substitute(args)
+
 
 if __name__ == "__main__":
     main()

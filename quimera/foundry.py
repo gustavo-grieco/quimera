@@ -1,5 +1,3 @@
-from os import system
-from pathlib import Path
 from shutil import rmtree
 from subprocess import run
 from re import compile
@@ -7,9 +5,11 @@ from logging import getLogger, INFO
 
 logger = getLogger(__name__)
 
+
 def escape_ansi(line):
-    ansi_escape = compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
-    return ansi_escape.sub('', line)
+    ansi_escape = compile(r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]")
+    return ansi_escape.sub("", line)
+
 
 def install_and_run_foundry(temp_dir, test_code, rpc_url) -> None:
     """Sets up a temporary directory for the tests"""
@@ -51,7 +51,11 @@ def install_and_run_foundry(temp_dir, test_code, rpc_url) -> None:
         outfile.write(test_code)
 
     logger.log(INFO, "Running Forge test...")
-    out = run(["forge", "test", "--fork-url", rpc_url, "-vvv"], cwd=temp_dir, capture_output=True)
+    out = run(
+        ["forge", "test", "--fork-url", rpc_url, "-vvv"],
+        cwd=temp_dir,
+        capture_output=True,
+    )
 
     stdout = out.stdout.decode().strip()
     stdout = escape_ansi(stdout)

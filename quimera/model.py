@@ -1,10 +1,10 @@
 import asyncio
 
 from datetime import datetime
-from pathlib import Path
 from signal import SIGINT, SIGTERM
 from subprocess import run
 from sys import platform
+
 
 def get_async_response(conversation, prompt):
     """
@@ -45,7 +45,10 @@ def resolve_prompt(prompt):
         # In general, shell=True is not recommended, but here only we use it to pipe the content to pbcopy (there is no other way)
         run("cat /tmp/quimera.prompt.txt | pbcopy", shell=True)
     elif platform == "linux":
-        run(["xclip", "-selection", "clipboard", "-in", "/tmp/quimera.prompt.txt"], check=True)
+        run(
+            ["xclip", "-selection", "clipboard", "-in", "/tmp/quimera.prompt.txt"],
+            check=True,
+        )
     else:
         raise ValueError("Unsupported platform.")
     # overwrite the prompt with instructions
@@ -76,6 +79,7 @@ def save_prompt_response(prompt, response, temp_dir):
     # save date and time in a timestamp.txt file
     with open(temp_dir / "timestamp.txt", "w", encoding="utf-8") as timestamp_file:
         timestamp_file.write(datetime.now().isoformat())
+
 
 def get_response(conversation, prompt):
     if conversation is None:

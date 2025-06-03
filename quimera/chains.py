@@ -15,6 +15,7 @@ def get_uniswap_router_address(chain):
     else:
         raise ValueError("Unsupported chain")
 
+
 def get_flashloan_provider(chain):
     if chain == "mainnet":
         return "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
@@ -23,13 +24,17 @@ def get_flashloan_provider(chain):
     else:
         raise ValueError("Unsupported chain")
 
+
 def get_flashloan_call(chain):
     if chain == "mainnet":
-        return "IBalancerVault(flashloanProvider).flashLoan(address(this), tokens, amounts, \"\");"
+        return 'IBalancerVault(flashloanProvider).flashLoan(address(this), tokens, amounts, "");'
     elif chain == "bsc":
-        return "IDODO(flashloanProvider).flashLoan(amounts[0], 0, address(this), \"0x0\");"
+        return (
+            'IDODO(flashloanProvider).flashLoan(amounts[0], 0, address(this), "0x0");'
+        )
     else:
         raise ValueError("Unsupported chain")
+
 
 def get_flashloan_receiver(chain):
     if chain == "mainnet":

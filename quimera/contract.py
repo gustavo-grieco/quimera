@@ -15,8 +15,8 @@ IMPLEMENTATION_SLOT = (
     "0x360894A13BA1A3210667C828492DB98DCA3E2076CC3735A920A3CA505D382BBC"
 )
 
-def get_contract_info(target, rpc_url, block_number, chain, args):
 
+def get_contract_info(target, rpc_url, block_number, chain, args):
     target = to_checksum_address(target)
 
     rpc_info = RpcInfo(rpc_url, int(block_number))
@@ -65,11 +65,14 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
                 continue
             if c.is_interface:
                 continue
-            print(f"Contract {c.name} has {len(c.functions_entry_points)} entry points.")
+            print(
+                f"Contract {c.name} has {len(c.functions_entry_points)} entry points."
+            )
             src_mapping = c.source_mapping
-            target_code += "\n" + c.compilation_unit.core.source_code[
-                src_mapping.filename.absolute
-            ]
+            target_code += (
+                "\n"
+                + c.compilation_unit.core.source_code[src_mapping.filename.absolute]
+            )
 
     # if _contract.is_erc4626:
     #    token_address = f"I{_contract.name}({target}).asset()"
@@ -95,8 +98,11 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
 
     private_vars = []
     for var in _contract.state_variables:
-        #if var.is_internal:
-        if not (isinstance(var.type, ElementaryType) and var.type.name in ["uint256", "bool"]):
+        # if var.is_internal:
+        if not (
+            isinstance(var.type, ElementaryType)
+            and var.type.name in ["uint256", "bool"]
+        ):
             continue
 
         if var.visibility == "public":

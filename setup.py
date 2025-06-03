@@ -12,9 +12,7 @@ setup(
     description="Data-driven exploit generation for Ethereum smart contracts using LLMs and Foundry",
     long_description_content_type="text/markdown",
     long_description=open("README.md").read(),
-    packages=[
-        "quimera"
-    ],
+    packages=["quimera"],
     license="AGPL3",
     entry_points="""
     [console_scripts]
