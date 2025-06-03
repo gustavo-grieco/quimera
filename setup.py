@@ -20,6 +20,7 @@ setup(
     """,
     install_requires=[
         "slither_analyzer",
+        "jsbeautifier",
         "llm",
     ],
     extras_require=extra_require,

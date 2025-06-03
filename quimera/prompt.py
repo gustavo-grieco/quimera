@@ -166,6 +166,7 @@ constraints = """
 * Do NOT try to exploit underflows or overflow conditions unless the contract is using Solidity < 0.8.0 or unchecked block. It will not work.
 * Do NOT explain the reasoning, only answer with the `duringFlashloan` and optionally the `receive` function (if needed) or any external function for callbacks/reentrancy.
 * Do NOT repeat or modify the rest of the code.
+* If available, use the `get_contract_source_info` tool to get the source code of a contract as well as additional information.
 
 # Recommendations
 

@@ -15,6 +15,7 @@ from shutil import which
 
 from llm import get_async_model
 from llm.errors import ModelError
+from llm import Tool
 
 from quimera.chains import (
     get_weth_address,
@@ -34,7 +35,7 @@ from quimera.prompt import (
 
 from quimera.foundry import install_and_run_foundry
 from quimera.model import get_response, save_prompt_response
-from quimera.contract import get_contract_info
+from quimera.contract import get_contract_info, get_contract_info_as_text
 
 basicConfig()
 logger = getLogger("Quimera")
@@ -190,8 +191,11 @@ def main() -> None:
     conversation = None
     if model_name != "manual":
         model = get_async_model(name=model_name)
+        tools=[
+            Tool.function(get_contract_info_as_text, name="get_contract_source_info"),
+        ],
         # start the llm converation
-        conversation = model.conversation()
+        conversation = model.conversation(tools=tools)
 
     for iteration in range(1, max_iterations + 1):
         logger.log(INFO, f"Iteration {iteration}")

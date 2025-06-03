@@ -1,6 +1,7 @@
 from logging import getLogger, INFO, WARNING
 
 from eth_utils import to_checksum_address
+from jsbeautifier import beautify
 
 from slither import Slither
 from slither.tools.read_storage import read_storage
@@ -14,7 +15,6 @@ logger = getLogger(__name__)
 IMPLEMENTATION_SLOT = (
     "0x360894A13BA1A3210667C828492DB98DCA3E2076CC3735A920A3CA505D382BBC"
 )
-
 
 def get_contract_info(target, rpc_url, block_number, chain, args):
     target = to_checksum_address(target)
@@ -58,6 +58,8 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
     target_code = _contract.compilation_unit.core.source_code[
         src_mapping.filename.absolute
     ]
+
+    target_code = beautify(target_code, opts={"indent_size": 2, "preserve_newlines": False})
 
     if len(_contract.compilation_unit.core.source_code) > 1:
         for c in _contract.inheritance:
@@ -127,3 +129,19 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
         "private_variables_values": private_variables_values,
         "contract_name": contract.name,
     }
+
+def get_contract_info_as_text(target, rpc_url, block_number, chain, args):
+    contract_info = get_contract_info(target, rpc_url, block_number, chain, args)
+    text = f"""
+    Contract Name: {contract_info['contract_name']}
+    Target Address: {contract_info['target_address']}
+    Implementation Address: {contract_info['implementation']}
+    Token Address: {contract_info['token_address']}
+    Interface:
+    {contract_info['interface']}
+    Target Code:
+    {contract_info['target_code']}
+    Private Variables Values:
+    {contract_info['private_variables_values']}
+    """
+    return text.strip()
