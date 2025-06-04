@@ -65,6 +65,7 @@ def install_and_run_foundry(temp_dir, test_code, rpc_url) -> None:
 
     return stderr + "\n" + stdout
 
+
 def copy_and_run_foundry(temp_dir, test_code, rpc_url, test_name) -> None:
     """Copies the target contract to a temporary directory and runs the tests"""
     # Create a temporary directory valid for the session

@@ -16,15 +16,17 @@ IMPLEMENTATION_SLOT = (
     "0x360894A13BA1A3210667C828492DB98DCA3E2076CC3735A920A3CA505D382BBC"
 )
 
+
 def get_base_contract(target):
-    slither = Slither(target, foundry_compile_all = True)
+    slither = Slither(target, foundry_compile_all=True)
     base_contract = slither.get_contract_from_name("QuimeraBaseTest")
     if base_contract == []:
-        logger.log(ERROR, "QuimeraBaseTest contract not found in the provided source code.")
+        logger.log(
+            ERROR, "QuimeraBaseTest contract not found in the provided source code."
+        )
         assert False
 
     base_contract = base_contract[0]
-
 
     src_mapping = base_contract.source_mapping
     base_code = base_contract.compilation_unit.core.source_code[
@@ -32,9 +34,9 @@ def get_base_contract(target):
     ]
     return base_code
 
-def get_contract_info(target, rpc_url, block_number, chain, args):
 
-    if ("0x" in target):
+def get_contract_info(target, rpc_url, block_number, chain, args):
+    if "0x" in target:
         target = to_checksum_address(target)
         rpc_info = RpcInfo(rpc_url, int(block_number))
         impl_raw = rpc_info.web3.eth.get_storage_at(target, IMPLEMENTATION_SLOT)
@@ -46,12 +48,13 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
 
         slither = Slither(chain + ":" + target, **vars(args))
     else:
-        slither = Slither(target, foundry_compile_all = True)
+        slither = Slither(target, foundry_compile_all=True)
         base_contract = slither.get_contract_from_name("QuimeraBaseTest")
         if base_contract == []:
-            logger.log(ERROR, "QuimeraBaseTest contract not found in the provided source code.")
+            logger.log(
+                ERROR, "QuimeraBaseTest contract not found in the provided source code."
+            )
             assert False
-
 
     # get all the contracts names
     contracts = slither.contracts
@@ -83,7 +86,9 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
         src_mapping.filename.absolute
     ]
 
-    target_code = beautify(target_code, opts={"indent_size": 2, "preserve_newlines": False})
+    target_code = beautify(
+        target_code, opts={"indent_size": 2, "preserve_newlines": False}
+    )
 
     if len(_contract.compilation_unit.core.source_code) > 1:
         for c in _contract.inheritance:
@@ -153,6 +158,7 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
         "private_variables_values": private_variables_values,
         "contract_name": contract.name,
     }
+
 
 def get_contract_info_as_text(target, rpc_url, block_number, chain, args):
     contract_info = get_contract_info(target, rpc_url, block_number, chain, args)

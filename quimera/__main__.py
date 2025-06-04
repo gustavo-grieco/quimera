@@ -35,7 +35,11 @@ from quimera.prompt import (
 
 from quimera.foundry import install_and_run_foundry, copy_and_run_foundry
 from quimera.model import get_response, save_prompt_response
-from quimera.contract import get_contract_info, get_contract_info_as_text, get_base_contract
+from quimera.contract import (
+    get_contract_info,
+    get_contract_info_as_text,
+    get_base_contract,
+)
 
 basicConfig()
 logger = getLogger("Quimera")
@@ -136,8 +140,9 @@ def main() -> None:
                 "Please set the ETHERSCAN_API_KEY environment variable to a valid API key."
             )
     else:
-        logger.log(INFO, "Assuming local contract source file or directory with mainnet chain")
-
+        logger.log(
+            INFO, "Assuming local contract source file or directory with mainnet chain"
+        )
 
     # get the block timestamp
     block_number = args.block_number
@@ -177,9 +182,13 @@ def main() -> None:
     args["targetCode"] = contract_info["target_code"]
 
     args["constraints"] = constraints
-    args["assignFlashLoanAddress"] = f"flashloanProvider = {get_flashloan_provider(chain)};"
+    args["assignFlashLoanAddress"] = (
+        f"flashloanProvider = {get_flashloan_provider(chain)};"
+    )
     args["assignWETHAddress"] = f"WETH = IWETH({get_weth_address(chain)});"
-    args["assignUniswapRouterAddress"] = f"uniswapRouter = IUniswapV2Router({get_uniswap_router_address(chain)});"
+    args["assignUniswapRouterAddress"] = (
+        f"uniswapRouter = IUniswapV2Router({get_uniswap_router_address(chain)});"
+    )
     args["assignTargetAddress"] = f"target = {contract_info['target_address']};"
     args["assignTokenAddress"] = f"token = {contract_info['token_address']};"
     args["executeExploitCall"] = "executeExploit(amount);"
@@ -203,9 +212,11 @@ def main() -> None:
         args["trace"] = install_and_run_foundry(temp_dir, test_code, rpc_url)
     else:
         test_code = test_code.replace("QuimeraBaseTest", "QuimeraTest")
-        temp_dir = Path(target , "test" , "quimera")
-        args["trace"] = copy_and_run_foundry(temp_dir, test_code, rpc_url, "QuimeraTest")
-        temp_dir = Path(target , "test" , "quimera", "log", "0")
+        temp_dir = Path(target, "test", "quimera")
+        args["trace"] = copy_and_run_foundry(
+            temp_dir, test_code, rpc_url, "QuimeraTest"
+        )
+        temp_dir = Path(target, "test", "quimera", "log", "0")
 
     prompt = SolidityTemplate(initial_prompt_template).substitute(args)
     save_prompt_response(prompt, None, temp_dir)
@@ -214,9 +225,13 @@ def main() -> None:
     conversation = None
     if model_name != "manual":
         model = get_async_model(name=model_name)
-        tools=[
-            Tool.function(get_contract_info_as_text, name="get_contract_source_info"),
-        ],
+        tools = (
+            [
+                Tool.function(
+                    get_contract_info_as_text, name="get_contract_source_info"
+                ),
+            ],
+        )
         # start the llm converation
         conversation = model.conversation(tools=tools)
 
@@ -246,7 +261,9 @@ def main() -> None:
 
         args["executeExploitCode"] = response.strip()
         if "```" in args["executeExploitCode"]:
-            args["executeExploitCode"] = args["executeExploitCode"].replace("solidity", "")
+            args["executeExploitCode"] = args["executeExploitCode"].replace(
+                "solidity", ""
+            )
             # Remove the code block markers
             args["executeExploitCode"] = args["executeExploitCode"].split("```")[1]
 
@@ -257,9 +274,11 @@ def main() -> None:
             temp_dir = Path("/tmp", "quimera_foundry_sessions", target, str(iteration))
             args["trace"] = install_and_run_foundry(temp_dir, test_code, rpc_url)
         else:
-            test_code = test_code.replace("QuimeraBaseTest", f"QuimeraTest")
+            test_code = test_code.replace("QuimeraBaseTest", "QuimeraTest")
             temp_dir = Path(target, "test", "quimera")
-            args["trace"] = copy_and_run_foundry(temp_dir, test_code, rpc_url, f"QuimeraTest")
+            args["trace"] = copy_and_run_foundry(
+                temp_dir, test_code, rpc_url, "QuimeraTest"
+            )
             temp_dir = Path(target, "test", "quimera", "log", str(iteration))
 
         save_prompt_response(prompt, response, temp_dir)
