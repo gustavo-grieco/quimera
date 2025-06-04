@@ -52,7 +52,7 @@ You can use `llm models` to show the available models.
 
 # Running modes
 
-Quimera can work with either deployed contracts (using Etherscan to fetch the source code) or in local mode with a Foundry codebase. To see an example how to use it locally, check the [tests/erc4626] directory. It imports the OpenZepelin ERC4626 vault which is instantiated using WETH in the tests. To use quimera, you must define a QuimeraBase contract in the `test/quimera/QuimeraBase.t.sol` similar to the example one.
+Quimera can work with either deployed contracts (using Etherscan to fetch the source code) or in local mode with a Foundry codebase. To see an example how to use it locally, check the [tests/erc4626](tests/erc4626) directory. It imports the OpenZepelin ERC4626 vault which is instantiated using WETH in the tests. To use quimera, you must define a QuimeraBase contract in the [`test/quimera/QuimeraBase.t.sol`](tests/erc4626/test/quimera/QuimeraBase.t.sol) similar to the example one.
 
 # Example session
 
