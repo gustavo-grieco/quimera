@@ -1,5 +1,5 @@
-initial_during_flashloan_function = """
-    function duringFlashLoan(uint256 amount) internal {}
+initial_execute_exploit_function = """
+    function executeExploit(uint256 amount) internal {}
 """
 
 test_contract_template = """
@@ -7,8 +7,6 @@ test_contract_template = """
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-
-$interface
 
 interface IWETH {
     function deposit() external payable;
@@ -82,22 +80,30 @@ interface IDODO {
     ) external;
 }
 
+//$interface
+
 contract TestFlaw {
-    address internal target = $targetAddress;
+    address internal target;
     address internal token0;
     address internal token1;
     address internal token;
-    IUniswapV2Router internal uniswapRouter = IUniswapV2Router($uniswapRouterAddress);
+    IUniswapV2Router internal uniswapRouter;
     IUniswapV2Pair internal uniswapPair;
-    IWETH private constant WETH = IWETH($wethAddress);
-    address private flashloanProvider = $flashloanAddress;
+    IWETH private WETH;
+    address private flashloanProvider;
 
     function setUp() public {
+
+        //$assignTargetAddress
+        //$assignUniswapRouterAddress
+        //$assignWETHAddress
+        //$assignFlashLoanAddress
+        //$assignTokenAddress
+
         // Remove any previous WETH/ETH from the balance
         WETH.transfer(address(0x0), WETH.balanceOf(address(this)));
         payable(address(0)).transfer(address(this).balance);
 
-        token = $tokenAddress;
         if (token == address(0))
             revert("Token address is zero");
 
@@ -137,12 +143,28 @@ contract TestFlaw {
 
         uint256 finalWethBalance = WETH.balanceOf(address(this));
         console.log("Initial balance %s", finalWethBalance);
-        $flashloanCall
+        //$flashloanCall
         console.log("Final balance %s", WETH.balanceOf(address(this)));
     }
 
-    $flashloanReceiver
-        duringFlashLoan(amount);
+    // Used by Balancer
+    function receiveFlashLoan(
+        IERC20[] memory,
+        uint256[] memory amounts,
+        uint256[] memory,
+        bytes memory
+    ) external {
+        uint256 amount = amounts[0];
+        flashLoanInternal(amount);
+    }
+
+    // Used by DODO
+    function DPPFlashLoanCall(address, uint256 amount, uint256, bytes memory) external {
+        flashLoanInternal(amount);
+    }
+
+    function flashLoanInternal(uint256 amount) internal {
+        //$executeExploitCall
 
         console.log("Current WETH balance: %s WETH", WETH.balanceOf(address(this)));
         WETH.transfer(flashloanProvider, amount);
@@ -151,7 +173,7 @@ contract TestFlaw {
         assert(surplusInETH > 0);
     }
 
-    $exploitCode
+    //$executeExploitCode
 }
 """
 
@@ -171,7 +193,7 @@ constraints = """
 # Recommendations
 
 * Carefully review how tokens flows from this contract, to the Uniswap pair (and maybe passing through others), and back to this contract to repay the flash loan.
-* You have initially a large amount of WETH available, but you don't have to use it all if you need it (depends on the liquidity available). Do not change this value, only use the part of the 1000 WETH that you need.
+* You have initially a large amount of WETH available, but you don't have to use it all if you need it (depends on the liquidity available). Do not change this value, only use the part of the flashloan that you need.
 * You start with no tokens, except WETH, so you must find a way to obtain the right tokens in order to trigger the flaw.
 * If you need ETH, unwrap WETH to ETH using the `WETH.withdraw` function.
 * Near the end, you need to swap all your tokens to WETH. Be careful with transfer fees and other constraints. The exploit should be "capital efficient", in order to be detectable when repaying the flashloan.
@@ -185,11 +207,11 @@ initial_prompt_template = """
 
 We are going to reproduce a Solidity smart contract issue step by step, incrementally modifying a Foundry test according to the information produced during its execution (e.g. a trace). This issue allows a user to start with a certain amount of WETH, perform some operations using the contract, and then obtain more WETH than the initial one.
 
-$constraints
+//$constraints
 
 # Code to review
 ```
-$targetCode
+//$targetCode
 ```
 
 The contract has a number of private variables that are not accessible, these are their current values:
@@ -198,19 +220,19 @@ $privateVariablesValues
 And the first Foundry trace is this one:
 
 ```
-$testCode
+//$testCode
 ```
-And the first foundry trace is this one:
+And the first Foundry trace is this one:
 ```
-$trace
+//$trace
 ```"""
 
 next_prompt_template = """
 The result of the last execution is:
 ```
-$trace
+//$trace
 ```
-Please improve the receiveFlashLoan function to fix the issue and make it work.
+Please improve the executeExploit function to fix the issue and make it work (or change your approach).
 
-$constraints
+//$constraints
 """

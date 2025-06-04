@@ -64,3 +64,27 @@ def install_and_run_foundry(temp_dir, test_code, rpc_url) -> None:
     stderr = escape_ansi(stderr)
 
     return stderr + "\n" + stdout
+
+def copy_and_run_foundry(temp_dir, test_code, rpc_url, test_name) -> None:
+    """Copies the target contract to a temporary directory and runs the tests"""
+    # Create a temporary directory valid for the session
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    logger.log(INFO, "Copying target contract to temporary directory...")
+    with open(temp_dir / f"{test_name}.t.sol", "w", encoding="utf-8") as outfile:
+        outfile.write(test_code)
+
+    logger.log(INFO, "Running Forge test...")
+    out = run(
+        ["forge", "test", "-vvv", "--fork-url", rpc_url, "--match-contract", test_name],
+        cwd=temp_dir,
+        capture_output=True,
+    )
+
+    stdout = out.stdout.decode().strip()
+    stdout = escape_ansi(stdout)
+
+    stderr = out.stderr.decode().strip()
+    stderr = escape_ansi(stderr)
+
+    return stderr + "\n" + stdout

@@ -8,7 +8,6 @@ from os import getenv
 from sys import exit
 from pathlib import Path
 from requests import get
-from string import Template
 from random import randint
 from time import sleep
 from shutil import which
@@ -17,6 +16,7 @@ from llm import get_async_model
 from llm.errors import ModelError
 from llm import Tool
 
+from quimera.template import SolidityTemplate
 from quimera.chains import (
     get_weth_address,
     get_uniswap_router_address,
@@ -28,14 +28,14 @@ from quimera.chains import (
 from quimera.prompt import (
     initial_prompt_template,
     next_prompt_template,
-    initial_during_flashloan_function,
+    initial_execute_exploit_function,
     test_contract_template,
     constraints,
 )
 
-from quimera.foundry import install_and_run_foundry
+from quimera.foundry import install_and_run_foundry, copy_and_run_foundry
 from quimera.model import get_response, save_prompt_response
-from quimera.contract import get_contract_info, get_contract_info_as_text
+from quimera.contract import get_contract_info, get_contract_info_as_text, get_base_contract
 
 basicConfig()
 logger = getLogger("Quimera")
@@ -72,6 +72,12 @@ def parse_args() -> Namespace:
         help="The number of iterations to run",
         type=int,
         default=1,
+    )
+    parser.add_argument(
+        "--thinking-budget",
+        help="The maximum time in seconds the model can take to generate a response",
+        type=int,
+        default=0,
     )
     return parser.parse_args()
 
@@ -112,22 +118,26 @@ def main() -> None:
             exit(1)
 
     target = args.contract_source
-    chain = "mainnet"
-    if ":" in target:
-        chain = target.split(":")[0]
-        target = target.split(":")[1]
-
     model_name = args.model
     max_iterations = args.iterations
 
-    api_key = getenv("ETHERSCAN_API_KEY")
-    if api_key is None:
-        raise ValueError("Please set the ETHERSCAN_API_KEY environment variable.")
+    chain = "mainnet"
+    if "0x" in target:
+        if ":" in target:
+            chain = target.split(":")[0]
+            target = target.split(":")[1]
 
-    if api_key == "TODO":
-        raise ValueError(
-            "Please set the ETHERSCAN_API_KEY environment variable to a valid API key."
-        )
+        api_key = getenv("ETHERSCAN_API_KEY")
+        if api_key is None:
+            raise ValueError("Please set the ETHERSCAN_API_KEY environment variable.")
+
+        if api_key == "TODO":
+            raise ValueError(
+                "Please set the ETHERSCAN_API_KEY environment variable to a valid API key."
+            )
+    else:
+        logger.log(INFO, "Assuming local contract source file or directory with mainnet chain")
+
 
     # get the block timestamp
     block_number = args.block_number
@@ -165,26 +175,39 @@ def main() -> None:
     args = {}
     args["interface"] = contract_info["interface"]
     args["targetCode"] = contract_info["target_code"]
-    args["targetAddress"] = contract_info["target_address"]
-    args["tokenAddress"] = contract_info["token_address"]
-    args["constraints"] = constraints
 
-    args["flashloanAddress"] = get_flashloan_provider(chain)
+    args["constraints"] = constraints
+    args["assignFlashLoanAddress"] = f"flashloanProvider = {get_flashloan_provider(chain)};"
+    args["assignWETHAddress"] = f"WETH = IWETH({get_weth_address(chain)});"
+    args["assignUniswapRouterAddress"] = f"uniswapRouter = IUniswapV2Router({get_uniswap_router_address(chain)});"
+    args["assignTargetAddress"] = f"target = {contract_info['target_address']};"
+    args["assignTokenAddress"] = f"token = {contract_info['token_address']};"
+    args["executeExploitCall"] = "executeExploit(amount);"
+
     args["flashloanCall"] = get_flashloan_call(chain)
     args["flashloanReceiver"] = get_flashloan_receiver(chain)
-
     args["privateVariablesValues"] = contract_info["private_variables_values"]
-    args["wethAddress"] = get_weth_address(chain)
-    args["uniswapRouterAddress"] = get_uniswap_router_address(chain)
-    args["exploitCode"] = initial_during_flashloan_function
 
-    test_code = Template(test_contract_template).substitute(args)
+    args["executeExploitCode"] = initial_execute_exploit_function
+
+    if "0x" not in target:
+        exploit_template = get_base_contract(target)
+    else:
+        exploit_template = test_contract_template
+
+    test_code = SolidityTemplate(exploit_template).substitute(args)
     args["testCode"] = test_code
 
-    temp_dir = Path("/tmp", "quimera_foundry_sessions", target, "0")
-    args["trace"] = install_and_run_foundry(temp_dir, test_code, rpc_url)
-    prompt = Template(initial_prompt_template).substitute(args)
+    if "0x" in target:
+        temp_dir = Path("/tmp", "quimera_foundry_sessions", target, "0")
+        args["trace"] = install_and_run_foundry(temp_dir, test_code, rpc_url)
+    else:
+        test_code = test_code.replace("QuimeraBaseTest", "QuimeraTest")
+        temp_dir = Path(target , "test" , "quimera")
+        args["trace"] = copy_and_run_foundry(temp_dir, test_code, rpc_url, "QuimeraTest")
+        temp_dir = Path(target , "test" , "quimera", "log", "0")
 
+    prompt = SolidityTemplate(initial_prompt_template).substitute(args)
     save_prompt_response(prompt, None, temp_dir)
 
     model = None
@@ -221,16 +244,24 @@ def main() -> None:
                     print("Execution interrupted by user.")
                     exit(1)
 
-        args["exploitCode"] = response.strip()
-        if "```" in args["exploitCode"]:
-            args["exploitCode"] = args["exploitCode"].replace("solidity", "")
+        args["executeExploitCode"] = response.strip()
+        if "```" in args["executeExploitCode"]:
+            args["executeExploitCode"] = args["executeExploitCode"].replace("solidity", "")
             # Remove the code block markers
-            args["exploitCode"] = args["exploitCode"].split("```")[1]
+            args["executeExploitCode"] = args["executeExploitCode"].split("```")[1]
 
-        test_code = Template(test_contract_template).substitute(args)
+        test_code = SolidityTemplate(exploit_template).substitute(args)
         args["testCode"] = test_code
-        temp_dir = Path("/tmp", "quimera_foundry_sessions", target, str(iteration))
-        args["trace"] = install_and_run_foundry(temp_dir, test_code, rpc_url)
+
+        if "0x" in target:
+            temp_dir = Path("/tmp", "quimera_foundry_sessions", target, str(iteration))
+            args["trace"] = install_and_run_foundry(temp_dir, test_code, rpc_url)
+        else:
+            test_code = test_code.replace("QuimeraBaseTest", f"QuimeraTest")
+            temp_dir = Path(target, "test", "quimera")
+            args["trace"] = copy_and_run_foundry(temp_dir, test_code, rpc_url, f"QuimeraTest")
+            temp_dir = Path(target, "test", "quimera", "log", str(iteration))
+
         save_prompt_response(prompt, response, temp_dir)
         logger.log(INFO, f"Trace/output: {args['trace']}")
         if (
@@ -244,7 +275,7 @@ def main() -> None:
         else:
             assert False, "Test result is not clear, please check the output."
 
-        prompt = Template(next_prompt_template).substitute(args)
+        prompt = SolidityTemplate(next_prompt_template).substitute(args)
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ def get_async_response(conversation, prompt):
 
     async def fetch_response():
         response = ""
-        async for chunk in conversation.prompt(prompt):
+        async for chunk in conversation.prompt(prompt, thinking_budget=1024):
             print(chunk, end="", flush=True)
             response += chunk
         return response

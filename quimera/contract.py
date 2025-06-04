@@ -1,4 +1,4 @@
-from logging import getLogger, INFO, WARNING
+from logging import getLogger, INFO, WARNING, ERROR
 
 from eth_utils import to_checksum_address
 from jsbeautifier import beautify
@@ -16,18 +16,42 @@ IMPLEMENTATION_SLOT = (
     "0x360894A13BA1A3210667C828492DB98DCA3E2076CC3735A920A3CA505D382BBC"
 )
 
+def get_base_contract(target):
+    slither = Slither(target, foundry_compile_all = True)
+    base_contract = slither.get_contract_from_name("QuimeraBaseTest")
+    if base_contract == []:
+        logger.log(ERROR, "QuimeraBaseTest contract not found in the provided source code.")
+        assert False
+
+    base_contract = base_contract[0]
+
+
+    src_mapping = base_contract.source_mapping
+    base_code = base_contract.compilation_unit.core.source_code[
+        src_mapping.filename.absolute
+    ]
+    return base_code
+
 def get_contract_info(target, rpc_url, block_number, chain, args):
-    target = to_checksum_address(target)
 
-    rpc_info = RpcInfo(rpc_url, int(block_number))
-    impl_raw = rpc_info.web3.eth.get_storage_at(target, IMPLEMENTATION_SLOT)
-    implementation = "0x" + impl_raw[-20:].hex()
-    if implementation != "0x0000000000000000000000000000000000000000":
-        target = implementation
+    if ("0x" in target):
         target = to_checksum_address(target)
-        logger.log(INFO, f"Proxy detected, using target address {target}")
+        rpc_info = RpcInfo(rpc_url, int(block_number))
+        impl_raw = rpc_info.web3.eth.get_storage_at(target, IMPLEMENTATION_SLOT)
+        implementation = "0x" + impl_raw[-20:].hex()
+        if implementation != "0x0000000000000000000000000000000000000000":
+            target = implementation
+            target = to_checksum_address(target)
+            logger.log(INFO, f"Proxy detected, using target address {target}")
 
-    slither = Slither(chain + ":" + target, **vars(args))
+        slither = Slither(chain + ":" + target, **vars(args))
+    else:
+        slither = Slither(target, foundry_compile_all = True)
+        base_contract = slither.get_contract_from_name("QuimeraBaseTest")
+        if base_contract == []:
+            logger.log(ERROR, "QuimeraBaseTest contract not found in the provided source code.")
+            assert False
+
 
     # get all the contracts names
     contracts = slither.contracts
@@ -95,34 +119,34 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
         include_structs=True,
     )
 
-    srs = SlitherReadStorage([_contract], max_depth=20, rpc_info=rpc_info)
-    srs.storage_address = target
-
-    private_vars = []
-    for var in _contract.state_variables:
-        # if var.is_internal:
-        if not (
-            isinstance(var.type, ElementaryType)
-            and var.type.name in ["uint256", "bool"]
-        ):
-            continue
-
-        if var.visibility == "public":
-            continue
-        private_vars.append(var.name)
-
-    read_storage.logger.disabled = True
-    srs.get_all_storage_variables(lambda x: x.name in private_vars)
-    srs.get_target_variables()
-    srs.walk_slot_info(srs.get_slot_values)
-
     private_variables_values = ""
-    for var in srs.slot_info.values():
-        private_variables_values += f"{var.name} = {var.value}\n"
+    if "0x" in target:
+        srs = SlitherReadStorage([_contract], max_depth=20, rpc_info=rpc_info)
+        srs.storage_address = target
+
+        private_vars = []
+        for var in _contract.state_variables:
+            # if var.is_internal:
+            if not (
+                isinstance(var.type, ElementaryType)
+                and var.type.name in ["uint256", "bool"]
+            ):
+                continue
+
+            if var.visibility == "public":
+                continue
+            private_vars.append(var.name)
+
+        read_storage.logger.disabled = True
+        srs.get_all_storage_variables(lambda x: x.name in private_vars)
+        srs.get_target_variables()
+        srs.walk_slot_info(srs.get_slot_values)
+
+        for var in srs.slot_info.values():
+            private_variables_values += f"{var.name} = {var.value}\n"
 
     return {
         "target_address": target,
-        "implementation": implementation,
         "interface": interface,
         "target_code": target_code,
         "token_address": token_address,
