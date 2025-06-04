@@ -50,6 +50,10 @@ quimera TARGET --model gpt-4o --iterations 5
 
 You can use `llm models` to show the available models.
 
+# Running modes
+
+Quimera can work with either deployed contracts (using Etherscan to fetch the source code) or in local mode with a Foundry codebase. To see an example how to use it locally, check the [tests/erc4626] directory. It imports the OpenZepelin ERC4626 vault which is instantiated using WETH in the tests. To use quimera, you must define a QuimeraBase contract in the `test/quimera/QuimeraBase.t.sol` similar to the example one.
+
 # Example session
 
 This session shows the different steps to re-discover the [APEMAGA exploit](https://github.com/SunWeb3Sec/DeFiHackLabs/blob/dc2cf9e53e9ccaf2eaf9806bad7cd914edefb41b/src/test/2024-06/APEMAGA_exp.sol#L23).
