@@ -184,10 +184,10 @@ constraints = """
 * Do NOT predict the trace output, you need to run the test and check the output.
 * Do NOT use SafeMath
 * Do NOT use third-parties during exploit (e.g. the owner doing something for you)
-* Do NOT use any cheat code (e.g prank)
 * Do NOT try to exploit underflows or overflow conditions unless the contract is using Solidity < 0.8.0 or unchecked block. It will not work.
 * If available, use the `get_contract_source_info` tool to get the source code of a contract as well as additional information.
 * VERY IMPORTANT: only answer with the `executeExploit` function and optionally the `receive` function (if needed) or any external function for callbacks/reentrancy. Do NOT output the rest of the code.
+* VERY IMPORTANT: do NOT use any cheat code (e.g prank). You will disqualified if you do so.
 
 # Recommendations
 
@@ -231,7 +231,7 @@ The result of the last execution is:
 ```
 //$trace
 ```
-Please improve the executeExploit function to fix the issue and make it work (or change your approach).
+Please improve the `executeExploit` function to fix the issue and make it work (or change your approach).
 
 //$constraints
 """
