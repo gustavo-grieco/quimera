@@ -195,7 +195,11 @@ def main() -> None:
 
     args["flashloanCall"] = get_flashloan_call(chain)
     args["flashloanReceiver"] = get_flashloan_receiver(chain)
-    args["privateVariablesValues"] = contract_info["private_variables_values"]
+
+    if "0x" in target:
+        args["privateVariablesValues"] = f"The contract has a number of private variables that are not accessible, these are their current values:\n{contract_info["private_variables_values"]}"
+    else:
+        args["privateVariablesValues"] = ""
 
     args["executeExploitCode"] = initial_execute_exploit_function
 

@@ -186,9 +186,8 @@ constraints = """
 * Do NOT use third-parties during exploit (e.g. the owner doing something for you)
 * Do NOT use any cheat code (e.g prank)
 * Do NOT try to exploit underflows or overflow conditions unless the contract is using Solidity < 0.8.0 or unchecked block. It will not work.
-* Do NOT explain the reasoning, only answer with the `duringFlashloan` and optionally the `receive` function (if needed) or any external function for callbacks/reentrancy.
-* Do NOT repeat or modify the rest of the code.
 * If available, use the `get_contract_source_info` tool to get the source code of a contract as well as additional information.
+* VERY IMPORTANT: only answer with the `executeExploit` function and optionally the `receive` function (if needed) or any external function for callbacks/reentrancy. Do NOT output the rest of the code.
 
 # Recommendations
 
@@ -214,14 +213,14 @@ We are going to reproduce a Solidity smart contract issue step by step, incremen
 //$targetCode
 ```
 
-The contract has a number of private variables that are not accessible, these are their current values:
-$privateVariablesValues
+//$privateVariablesValues
 
-And the first Foundry trace is this one:
+# Test code to execute the exploit
 
 ```
 //$testCode
 ```
+
 And the first Foundry trace is this one:
 ```
 //$trace
