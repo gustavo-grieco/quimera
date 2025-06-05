@@ -21,7 +21,7 @@ setup(
     install_requires=[
         "slither_analyzer",
         "jsbeautifier",
-        "llm",
+        "llm >= 0.26",
     ],
     extras_require=extra_require,
     url="https://github.com/gustavo-grieco/quimera",
