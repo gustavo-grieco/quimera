@@ -10,7 +10,7 @@ This is a basic tool that uses large language models (LLMs) to gradually discove
 
 4. If it did, stop. If not, go back to step 2 and give the LLM the trace from the failed attempt to help it improve.
 
-**Current Status**: This is an experimental prototype. We’re still figuring out the best settings (like the right temperature), how to write better prompts, and what the tool is really capable of. Right now, it's focused on simple exploits involving token manipulation through Uniswap pairs. Stay tuned for updates!
+**Current Status**: This is an experimental prototype. We’re still figuring out the best settings (like the right temperature), how to write better prompts, and what the tool is really capable of. Right now, it's focused on simple exploits involving token manipulation through Uniswap pairs. Follow the discussion on [the rediscovered exploits here](https://github.com/gustavo-grieco/quimera/issues/6).
 
 # Requirements
 
@@ -41,7 +41,7 @@ Note that in "manual mode", there is no need to install any plugin as the user w
 # Getting started
 
 1. Modify the keys.sh file to add the RPC and Etherscan keys.
-2. Select a block number B and then execute `source keys.sh B"
+2. Select a block number `B` and then execute `source keys.sh B`
 3. Invoke Quimera:
 
 ```
