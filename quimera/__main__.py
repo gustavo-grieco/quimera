@@ -18,7 +18,7 @@ from llm import Tool
 
 from quimera.template import SolidityTemplate
 from quimera.chains import (
-    get_weth_address,
+    get_valuable_token_address,
     get_uniswap_router_address,
     get_flashloan_provider,
     get_flashloan_call,
@@ -64,13 +64,17 @@ def parse_args() -> Namespace:
     parser.add_argument("--block-number", help="The block number")
 
     parser.add_argument("--contract", help="The contract name to use")
+    parser.add_argument(
+        "--valuable-token",
+        help="The valuable token to use for the exploit (e.g. weth, usdc)",
+        default="weth",
+    )
 
     parser.add_argument(
         "--model",
         help="The model to use for code generation",
         default="manual",
     )
-
     parser.add_argument(
         "--iterations",
         help="The number of iterations to run",
@@ -122,6 +126,7 @@ def main() -> None:
             exit(1)
 
     target = args.contract_source
+    valuable_token = args.valuable_token.lower()
     model_name = args.model
     max_iterations = args.iterations
 
@@ -181,11 +186,12 @@ def main() -> None:
     args["interface"] = contract_info["interface"]
     args["targetCode"] = contract_info["target_code"]
 
-    args["constraints"] = constraints
+    args["constraints"] = constraints.replace("$valuableTokenName", valuable_token.upper())
+    args["valuableTokenName"] = valuable_token.upper()
     args["assignFlashLoanAddress"] = (
         f"flashloanProvider = {get_flashloan_provider(chain)};"
     )
-    args["assignWETHAddress"] = f"WETH = IWETH({get_weth_address(chain)});"
+    args["assignValuableTokenAddress"] = f"valuableToken = IERC20({get_valuable_token_address(valuable_token, chain)});"
     args["assignUniswapRouterAddress"] = (
         f"uniswapRouter = IUniswapV2Router({get_uniswap_router_address(chain)});"
     )

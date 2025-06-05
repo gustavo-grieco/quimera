@@ -100,10 +100,14 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
                 f"Contract {c.name} has {len(c.functions_entry_points)} entry points."
             )
             src_mapping = c.source_mapping
-            target_code += (
-                "\n"
-                + c.compilation_unit.core.source_code[src_mapping.filename.absolute]
+            internal_contract_code = c.compilation_unit.core.source_code[src_mapping.filename.absolute]
+            internal_contract_code = beautify(
+                internal_contract_code, opts={"indent_size": 2, "preserve_newlines": False}
             )
+
+            target_code += "\n" + internal_contract_code
+
+
 
     # if _contract.is_erc4626:
     #    token_address = f"I{_contract.name}({target}).asset()"

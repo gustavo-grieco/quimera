@@ -89,40 +89,40 @@ contract TestFlaw {
     address internal token;
     IUniswapV2Router internal uniswapRouter;
     IUniswapV2Pair internal uniswapPair;
-    IWETH private WETH;
+    IERC20 private valuableToken;
     address private flashloanProvider;
 
     function setUp() public {
 
         //$assignTargetAddress
         //$assignUniswapRouterAddress
-        //$assignWETHAddress
+        //$assignValuableTokenAddress
         //$assignFlashLoanAddress
         //$assignTokenAddress
 
-        // Remove any previous WETH/ETH from the balance
-        WETH.transfer(address(0x0), WETH.balanceOf(address(this)));
-        payable(address(0)).transfer(address(this).balance);
+        // Remove any previous valuableToken/ETH from the balance
+        valuableToken.transfer(address(0xdead), valuableToken.balanceOf(address(this)));
+        payable(address(0xdead)).transfer(address(this).balance);
 
         if (token == address(0))
             revert("Token address is zero");
 
         IUniswapV2Factory uniswapFactory = IUniswapV2Factory(uniswapRouter.factory());
-        uniswapPair = IUniswapV2Pair(uniswapFactory.getPair(address(WETH), token));
+        uniswapPair = IUniswapV2Pair(uniswapFactory.getPair(address(valuableToken), token));
 
         if (address(uniswapPair) == address(0))
             return;
 
-        //if (WETH.balanceOf(address(uniswapPair)) < 1 ether)
-        //    revert("Not enough WETH in pair");
+        if (valuableToken.balanceOf(address(uniswapPair)) < 10 ether)
+            revert("Not enough value in pair");
 
         token0 = uniswapPair.token0();
         token1 = uniswapPair.token1();
 
-        WETH.approve(address(uniswapRouter), type(uint256).max);
+        valuableToken.approve(address(uniswapRouter), type(uint256).max);
         IERC20(token).approve(address(uniswapRouter), type(uint256).max);
 
-        WETH.approve(target, type(uint256).max);
+        valuableToken.approve(target, type(uint256).max);
         IERC20(token).approve(target, type(uint256).max);
 
         uint112 reserve0;
@@ -132,19 +132,19 @@ contract TestFlaw {
     }
 
     function testFlaw() external {
-         // flashloan WETH from Balancer
+         // flashloan valuableToken from Balancer
         address[] memory tokens = new address[](1);
-        tokens[0] = address(WETH);
+        tokens[0] = address(valuableToken);
 
         uint256[] memory amounts = new uint256[](1);
-        amounts[0] = WETH.balanceOf(flashloanProvider);
+        amounts[0] = valuableToken.balanceOf(flashloanProvider);
 
-        console.log("%s available for the flashloan in wei", amounts[0]);
+        console.log("%s available for the flashloan of valuableToken", amounts[0]);
 
-        uint256 finalWethBalance = WETH.balanceOf(address(this));
-        console.log("Initial balance %s", finalWethBalance);
+        uint256 finalValuableBalance = valuableToken.balanceOf(address(this));
+        console.log("Initial balance %s", finalValuableBalance);
         //$flashloanCall
-        console.log("Final balance %s", WETH.balanceOf(address(this)));
+        console.log("Final balance %s", valuableToken.balanceOf(address(this)));
     }
 
     // Used by Balancer
@@ -166,11 +166,11 @@ contract TestFlaw {
     function flashLoanInternal(uint256 amount) internal {
         //$executeExploitCall
 
-        console.log("Current WETH balance: %s WETH", WETH.balanceOf(address(this)));
-        WETH.transfer(flashloanProvider, amount);
-        uint256 surplusInETH = WETH.balanceOf(address(this));
-        console.log("Surplus: %s WETH", surplusInETH);
-        assert(surplusInETH > 0);
+        console.log("Current valuable balance: %s", valuableToken.balanceOf(address(this)));
+        valuableToken.transfer(flashloanProvider, amount);
+        uint256 surplusInValuable = valuableToken.balanceOf(address(this));
+        console.log("Surplus: %s", surplusInValuable);
+        assert(surplusInValuable > 0);
     }
 
     //$executeExploitCode
@@ -192,10 +192,9 @@ constraints = """
 # Recommendations
 
 * Carefully review how tokens flows from this contract, to the Uniswap pair (and maybe passing through others), and back to this contract to repay the flash loan.
-* You have initially a large amount of WETH available, but you don't have to use it all if you need it (depends on the liquidity available). Do not change this value, only use the part of the flashloan that you need.
-* You start with no tokens, except WETH, so you must find a way to obtain the right tokens in order to trigger the flaw.
-* If you need ETH, unwrap WETH to ETH using the `WETH.withdraw` function.
-* Near the end, you need to swap all your tokens to WETH. Be careful with transfer fees and other constraints. The exploit should be "capital efficient", in order to be detectable when repaying the flashloan.
+* You have initially a large amount of $valuableTokenName available, but you don't have to use it all if you need it (depends on the liquidity available). Do not change this value, only use the part of the flashloan that you need.
+* You start with no tokens, except $valuableTokenName, so you must find a way to obtain the right tokens in order to trigger the flaw.
+* Near the end, you need to swap all your tokens to $valuableTokenName. Be careful with transfer fees and other constraints. The exploit should be "capital efficient", in order to be detectable when repaying the flashloan.
 * Use `console.log` to query the state of the contracts, if needed.
 * Keep the control flow of the exploit simple: do not use if conditions, only sequences of calls.
 * Try using different functions of the target contracts and evaluate the effects to see if they are useful for the exploit.
@@ -204,7 +203,7 @@ constraints = """
 initial_prompt_template = """
 # Instructions
 
-We are going to reproduce a Solidity smart contract issue step by step, incrementally modifying a Foundry test according to the information produced during its execution (e.g. a trace). This issue allows a user to start with a certain amount of WETH, perform some operations using the contract, and then obtain more WETH than the initial one.
+We are going to reproduce a Solidity smart contract issue step by step, incrementally modifying a Foundry test according to the information produced during its execution (e.g. a trace). This issue allows a user to start with a certain amount of //$valuableTokenName, perform some operations using the contract, and then obtain more //$valuableTokenName than the initial one.
 
 //$constraints
 
