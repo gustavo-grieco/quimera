@@ -52,7 +52,7 @@ def install_and_run_foundry(temp_dir, test_code, rpc_url) -> None:
 
     logger.log(INFO, "Running Forge test...")
     out = run(
-        ["forge", "test", "--fork-url", rpc_url, "-vvvv"],
+        ["forge", "test", "-vvv", "--fork-url", rpc_url],
         cwd=temp_dir,
         capture_output=True,
     )

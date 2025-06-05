@@ -1,6 +1,15 @@
 def get_valuable_token_address(name, chain):
     if name == "weth":
         return get_weth_address(chain)
+    elif name == "wbtc":
+        if chain == "mainnet":
+            return "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"
+        elif chain == "bsc":
+            return "0x7130d2A12B9bCBf4D7E3dF8cF6B8eA1c2D3bC1d"
+        elif chain == "arbi":
+            return "0xBbbbCA6A901c926F240b89EacB641d8Aec7AEafD"
+        else:
+            raise ValueError("Unsupported chain for WBTC")
     elif name == "usdc":
         if chain == "arbi":
             return "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"
@@ -11,6 +20,13 @@ def get_valuable_token_address(name, chain):
             return "0x912CE59144191C1204E64559FE8253a0e49E6548"
         else:
             raise ValueError("ARB token is only available on Arbitrum")
+    elif name == "busdt":
+        if chain == "bsc":
+            return "0x55d398326f99059fF775485246999027B3197955"
+        else:
+            raise ValueError("BUSD-T token is only available on BSC")
+    else:
+        raise ValueError(f"Unsupported token name: {name}")
 
 def get_weth_address(chain):
     if chain == "mainnet":
