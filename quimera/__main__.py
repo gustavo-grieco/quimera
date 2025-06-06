@@ -185,6 +185,8 @@ def main() -> None:
     args = {}
     args["interface"] = contract_info["interface"]
     args["targetCode"] = contract_info["target_code"]
+    args["targetAddress"] = target
+    args["targetContractName"] = contract_info["contract_name"]
 
     args["constraints"] = constraints.replace("$valuableTokenName", valuable_token.upper())
     args["valuableTokenName"] = valuable_token.upper()

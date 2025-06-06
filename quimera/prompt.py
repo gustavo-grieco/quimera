@@ -140,7 +140,9 @@ contract TestFlaw {
         uint112 reserve0;
         uint112 reserve1;
         (reserve0, reserve1, ) = uniswapPair.getReserves();
-        console.log("Uniswap reserves: %d %d", reserve0, reserve1);
+        console.log("Uniswap reserves:");
+        console.log("%d for %s", reserve0, token0);
+        console.log("%d for %s", reserve1, token1);
     }
 
     function testFlaw() external {
@@ -195,9 +197,11 @@ constraints = """
 * Do NOT guess the internal behavior of the contract, instead use the information provided by the trace, which is always accurate.
 * Do NOT predict the trace output, you need to run the test and check the output.
 * Do NOT use SafeMath
+* Do NOT use low-level calls
 * Do NOT define additional contracts to deploy but you can use imported ones (e.g. ERC20Mock)
-* Do NOT use third-parties during exploit (e.g. the owner doing something for you)
+* Do NOT use third-parties during exploit (e.g. the owner doing something for you). You can still pass other contracts or EOA addresses as parameters to the exploit if needed.
 * Do NOT use any private key operations (e.g. signing messages, etc.)
+* Do NOT try to re-initialize the contract, it will not work.
 * Do NOT try to exploit underflows or overflow conditions unless the contract is using Solidity < 0.8.0 or unchecked block. It will not work. However, unsafe casting is an issue for all versions.
 * If available, use the `get_contract_source_info` tool to get the source code of a contract as well as additional information.
 * VERY IMPORTANT: only answer with the `executeExploit` function and optionally the `receive` function (if needed) or any external function for callbacks/reentrancy. Do NOT output the rest of the code.
@@ -217,7 +221,9 @@ constraints = """
 initial_prompt_template = """
 # Instructions
 
-We are going to reproduce a Solidity smart contract issue step by step, incrementally modifying a Foundry test according to the information produced during its execution (e.g. a trace). This issue allows a user to start with a certain amount of //$valuableTokenName, perform some operations using the contract, and then obtain more //$valuableTokenName than the initial one.
+We are going to reproduce a Solidity smart contract issue step by step targetting //$targetAddress which contains a //$targetContractName contract.
+The goal is to incrementally modifying a Foundry test according to the information produced during its execution (e.g. a trace) until we can reproduce the issue.
+This issue allows a user to start with a certain amount of //$valuableTokenName, perform some operations using the contract (or other related ones), and then obtain more //$valuableTokenName than the initial one.
 
 //$constraints
 
