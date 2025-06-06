@@ -16,6 +16,30 @@ IMPLEMENTATION_SLOT = (
     "0x360894A13BA1A3210667C828492DB98DCA3E2076CC3735A920A3CA505D382BBC"
 )
 
+def extract_contract_code_recursively(contract, visited):
+    """
+    Extracts the source code of a contract and its base contracts recursively.
+    """
+    print(f"Processing contract: {contract.name}")
+    code = contract.compilation_unit.core.source_code[contract.source_mapping.filename.absolute]
+    code = beautify(code, opts={"indent_size": 2, "preserve_newlines": False})
+
+    for base in contract.inheritance:
+        print(f"Processing base contract: {base.name}")
+        if base.name in visited:
+            print(f"Skipping already visited base contract: {base.name}")
+            continue
+
+        if base.is_interface:
+            print(f"Skipping interface base contract: {base.name}")
+            continue
+
+        visited.add(base.name)
+
+        base_code = extract_contract_code_recursively(base, visited)
+        code += "\n\n" + base_code
+
+    return code
 
 def get_base_contract(target):
     slither = Slither(target, foundry_compile_all=True)
@@ -81,33 +105,14 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
     logger.info(f"Contracts found: {contracts_names}, selected {contract_name}")
     _contract = slither.get_contract_from_name(contract_name)[0]
 
-    src_mapping = _contract.source_mapping
-    target_code = _contract.compilation_unit.core.source_code[
-        src_mapping.filename.absolute
-    ]
-
-    target_code = beautify(
-        target_code, opts={"indent_size": 2, "preserve_newlines": False}
-    )
-
     if len(_contract.compilation_unit.core.source_code) > 1:
-        for c in _contract.inheritance:
-            if c.is_abstract:
-                continue
-            if c.is_interface:
-                continue
-            print(
-                f"Contract {c.name} has {len(c.functions_entry_points)} entry points."
-            )
-            src_mapping = c.source_mapping
-            internal_contract_code = c.compilation_unit.core.source_code[src_mapping.filename.absolute]
-            internal_contract_code = beautify(
-                internal_contract_code, opts={"indent_size": 2, "preserve_newlines": False}
-            )
-
-            target_code += "\n" + internal_contract_code
-
-
+        target_code = extract_contract_code_recursively(_contract, set([_contract.name]))
+    else:
+        src_mapping = _contract.source_mapping
+        target_code = _contract.compilation_unit.core.source_code[
+            src_mapping.filename.absolute
+        ]
+        target_code = beautify(target_code, opts={"indent_size": 2, "preserve_newlines": False})
 
     # if _contract.is_erc4626:
     #    token_address = f"I{_contract.name}({target}).asset()"
@@ -161,6 +166,7 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
         "token_address": token_address,
         "private_variables_values": private_variables_values,
         "contract_name": contract.name,
+        "is_erc20": _contract.is_erc20,
     }
 
 

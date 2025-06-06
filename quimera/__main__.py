@@ -196,7 +196,11 @@ def main() -> None:
         f"uniswapRouter = IUniswapV2Router({get_uniswap_router_address(chain)});"
     )
     args["assignTargetAddress"] = f"target = {contract_info['target_address']};"
-    args["assignTokenAddress"] = f"token = {contract_info['token_address']};"
+    if contract_info["is_erc20"]:
+        args["assignTokenAddress"] = f"token = {contract_info['token_address']};"
+    else:
+        args["assignTokenAddress"] = ""
+
     args["executeExploitCall"] = "executeExploit(amount);"
 
     args["flashloanCall"] = get_flashloan_call(chain)

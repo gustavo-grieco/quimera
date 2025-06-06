@@ -27,13 +27,29 @@ interface IUniswapV2Factory {
 }
 
 interface IUniswapV2Pair {
-    function balanceOf(address) external view returns (uint256);
-    function skim(address to) external;
-    function sync() external;
-    function swap(uint256 amount0Out, uint256 amount1Out, address to, bytes memory data) external;
-    function token0() external view returns (address);
-    function token1() external view returns (address);
-    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
+  function decimals() external pure returns (uint8);
+  function totalSupply() external view returns (uint);
+  function balanceOf(address owner) external view returns (uint);
+  function allowance(address owner, address spender) external view returns (uint);
+
+  function approve(address spender, uint value) external returns (bool);
+  function transfer(address to, uint value) external returns (bool);
+  function transferFrom(address from, address to, uint value) external returns (bool);
+
+  function MINIMUM_LIQUIDITY() external pure returns (uint);
+  function factory() external view returns (address);
+  function token0() external view returns (address);
+  function token1() external view returns (address);
+  function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
+  function price0CumulativeLast() external view returns (uint);
+  function price1CumulativeLast() external view returns (uint);
+  function kLast() external view returns (uint);
+
+  function mint(address to) external returns (uint liquidity);
+  function burn(address to) external returns (uint amount0, uint amount1);
+  function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external;
+  function skim(address to) external;
+  function sync() external;
 }
 
 interface IUniswapV2Router {
@@ -106,19 +122,14 @@ contract TestFlaw {
 
         // Handle approvals
         valuableToken.approve(target, type(uint256).max);
-        IERC20(token).approve(target, type(uint256).max);
-
-        if (token == address(0))
-            revert("Token address is zero");
+        if (token != address(0))
+            IERC20(token).approve(target, type(uint256).max);
 
         IUniswapV2Factory uniswapFactory = IUniswapV2Factory(uniswapRouter.factory());
         uniswapPair = IUniswapV2Pair(uniswapFactory.getPair(address(valuableToken), token));
 
         if (address(uniswapPair) == address(0))
             return;
-
-        if (valuableToken.balanceOf(address(uniswapPair)) < 10 ether)
-            revert("Not enough value in pair");
 
         token0 = uniswapPair.token0();
         token1 = uniswapPair.token1();
