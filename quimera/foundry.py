@@ -11,6 +11,15 @@ def escape_ansi(line):
     return ansi_escape.sub("", line)
 
 
+foundry_toml = """
+[profile.default]
+solc-version = "0.8.20"
+optimizer = true
+optimizer_runs = 100000000
+via_ir = true
+evm_version = "shanghai"
+"""
+
 def install_and_run_foundry(temp_dir, test_code, rpc_url) -> None:
     """Sets up a temporary directory for the tests"""
     # Create a temporary directory valid for the session
@@ -24,13 +33,7 @@ def install_and_run_foundry(temp_dir, test_code, rpc_url) -> None:
 
     # Create foundry config
     foundry_config = temp_dir / "foundry.toml"
-    out_str: str = """
-    [profile.default]
-    solc-version = "0.8.20"
-    optimizer = true
-    optimizer_runs = 100000000
-    via_ir = true
-    """
+    out_str: str = foundry_toml
     with open(foundry_config, "w", encoding="utf-8") as outfile:
         outfile.write(out_str)
 

@@ -160,10 +160,8 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
             private_variables_values += f"{var.name} = {var.value}\n"
 
     return {
-        "target_address": target,
         "interface": interface,
         "target_code": target_code,
-        "token_address": token_address,
         "private_variables_values": private_variables_values,
         "contract_name": contract.name,
         "is_erc20": _contract.is_erc20,

@@ -54,6 +54,8 @@ interface IUniswapV2Pair {
 
 interface IUniswapV2Router {
     function factory() external view returns (address);
+    function WETH() external pure returns (address);
+
     function swapExactTokensForTokensSupportingFeeOnTransferTokens(
         uint256 amountIn,
         uint256 amountOutMin,
@@ -76,6 +78,42 @@ interface IUniswapV2Router {
         address to,
         uint deadline
     ) external;
+
+    function addLiquidity(
+        address tokenA,
+        address tokenB,
+        uint amountADesired,
+        uint amountBDesired,
+        uint amountAMin,
+        uint amountBMin,
+        address to,
+        uint deadline
+    ) external returns (uint amountA, uint amountB, uint liquidity);
+    function addLiquidityETH(
+        address token,
+        uint amountTokenDesired,
+        uint amountTokenMin,
+        uint amountETHMin,
+        address to,
+        uint deadline
+    ) external payable returns (uint amountToken, uint amountETH, uint liquidity);
+    function removeLiquidity(
+        address tokenA,
+        address tokenB,
+        uint liquidity,
+        uint amountAMin,
+        uint amountBMin,
+        address to,
+        uint deadline
+    ) external returns (uint amountA, uint amountB);
+    function removeLiquidityETH(
+        address token,
+        uint liquidity,
+        uint amountTokenMin,
+        uint amountETHMin,
+        address to,
+        uint deadline
+    ) external returns (uint amountToken, uint amountETH);
 }
 
 interface IBalancerVault {
@@ -98,7 +136,7 @@ interface IDODO {
 
 //$interface
 
-contract TestFlaw {
+contract TestFlaw is Test {
     address internal target;
     address internal token0;
     address internal token1;
@@ -107,6 +145,7 @@ contract TestFlaw {
     IUniswapV2Pair internal uniswapPair;
     IERC20 private valuableToken;
     address private flashloanProvider;
+
 
     function setUp() public {
 
@@ -122,14 +161,16 @@ contract TestFlaw {
 
         // Handle approvals
         valuableToken.approve(target, type(uint256).max);
-        if (token != address(0))
-            IERC20(token).approve(target, type(uint256).max);
+        //if (token != address(0))
+        //    IERC20(token).approve(target, type(uint256).max);
 
         IUniswapV2Factory uniswapFactory = IUniswapV2Factory(uniswapRouter.factory());
         uniswapPair = IUniswapV2Pair(uniswapFactory.getPair(address(valuableToken), token));
 
-        if (address(uniswapPair) == address(0))
+        if (address(uniswapPair) == address(0)) {
+            console.log("Uniswap pair not found.");
             return;
+        }
 
         token0 = uniswapPair.token0();
         token1 = uniswapPair.token1();
@@ -216,6 +257,7 @@ constraints = """
 * Use `console.log` to query the state of the contracts, if needed.
 * Keep the control flow of the exploit simple: do not use if conditions, only sequences of calls.
 * Try using different functions of the target contracts and evaluate the effects to see if they are useful for the exploit.
+* If the uniswap pair is not initially available and you need it, try to find a suitable token and query the Uniswap factory to get the pair address.
 """
 
 initial_prompt_template = """

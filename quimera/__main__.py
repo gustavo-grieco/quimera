@@ -197,9 +197,9 @@ def main() -> None:
     args["assignUniswapRouterAddress"] = (
         f"uniswapRouter = IUniswapV2Router({get_uniswap_router_address(chain)});"
     )
-    args["assignTargetAddress"] = f"target = {contract_info['target_address']};"
+    args["assignTargetAddress"] = f"target = {target};"
     if contract_info["is_erc20"]:
-        args["assignTokenAddress"] = f"token = {contract_info['token_address']};"
+        args["assignTokenAddress"] = f"token = {target};"
     else:
         args["assignTokenAddress"] = ""
 
