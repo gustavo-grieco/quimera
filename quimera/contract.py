@@ -124,6 +124,12 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
         include_structs=True,
     )
 
+    history = """struct History {
+        Checkpoint[] checkpoints;
+    }"""
+
+    interface = interface.replace(history, "")
+
     private_variables_values = ""
     if "0x" in target:
         srs = SlitherReadStorage([_contract], max_depth=20, rpc_info=rpc_info)

@@ -245,7 +245,8 @@ constraints = """
 * Do NOT use any private key operations (e.g. signing messages, etc.)
 * Do NOT try to re-initialize the contract, it will not work.
 * Do NOT try to exploit underflows or overflow conditions unless the contract is using Solidity < 0.8.0 or unchecked block. It will not work. However, unsafe casting is an issue for all versions.
-* If available, use the `get_contract_source_info` tool to get the source code of a contract as well as additional information.
+* Use the `get_contract_source_info` tool to get the source code of a contract as well as additional information.
+* Other tools available are `multiply_big_numbers`, `add_big_numbers`, `subtract_big_numbers`, `divide_big_numbers`. Use them to perform arithmetic operations, do NOT attempt to do it manually.
 * VERY IMPORTANT: only answer with the `executeExploit` function and optionally the `receive` function (if needed) or any external function for callbacks/reentrancy. Do NOT output the rest of the code.
 * VERY IMPORTANT: do NOT use any cheat code (e.g prank). You will disqualified if you do so.
 * If you want to simulate a EOA, use `vm.startPrank(address(this), address(this));` and `vm.stopPrank();` functions. These are the ONLY allowed cheatcodes.

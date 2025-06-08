@@ -244,7 +244,10 @@ def main() -> None:
     if model_name != "manual":
         model = get_async_model(name=model_name)
         tools = [
-            Tool.function(lambda address: get_contract_info_as_text(address, rpc_url, block_number, chain, args), name="get_contract_info_as_text")
+            Tool.function(lambda address: get_contract_info_as_text(address, rpc_url, block_number, chain, args), name="get_contract_info_as_text"),
+            Tool.function(lambda x, y: x * y, name="multiply_big_numbers"),
+            Tool.function(lambda x, y: x + y, name="add_big_numbers"),
+            Tool.function(lambda x, y: x - y, name="subtract_big_numbers")
         ]
         # start the llm converation
         conversation = model.conversation(tools=tools)
