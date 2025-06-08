@@ -180,6 +180,7 @@ contract TestFlaw is Test {
 
         // Remove any previous valuableToken/ETH from the balance
         valuableToken.transfer(address(0xdead), valuableToken.balanceOf(address(this)));
+        IERC20(uniswapRouter.WETH()).transfer(address(0xdead), IERC20(uniswapRouter.WETH()).balanceOf(address(this)));
         payable(address(0xdead)).transfer(address(this).balance);
 
         // Handle approvals
