@@ -276,6 +276,7 @@ This issue allows a user to start with a certain amount of //$valuableTokenName,
 //$targetCode
 ```
 
+The contract has a number of private variables that are not accessible, these are their current values:
 //$privateVariablesValues
 
 # Test code to execute the exploit

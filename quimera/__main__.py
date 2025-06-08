@@ -182,10 +182,12 @@ def main() -> None:
         chain,
         args,
     )
+
+    target = contract_info["target_address"]
     args = {}
     args["interface"] = contract_info["interface"]
     args["targetCode"] = contract_info["target_code"]
-    args["targetAddress"] = target
+    args["targetAddress"] = contract_info["target_address"]
     args["targetContractName"] = contract_info["contract_name"]
 
     args["constraints"] = constraints.replace("$valuableTokenName", valuable_token.upper())
@@ -209,7 +211,7 @@ def main() -> None:
     args["flashloanReceiver"] = get_flashloan_receiver(chain)
 
     if "0x" in target:
-        args["privateVariablesValues"] = f"The contract has a number of private variables that are not accessible, these are their current values:\n{contract_info["private_variables_values"]}"
+        args["privateVariablesValues"] = f"{contract_info["private_variables_values"]}"
     else:
         args["privateVariablesValues"] = ""
 
@@ -241,13 +243,9 @@ def main() -> None:
     conversation = None
     if model_name != "manual":
         model = get_async_model(name=model_name)
-        tools = (
-            [
-                Tool.function(
-                    get_contract_info_as_text, name="get_contract_source_info"
-                ),
-            ],
-        )
+        tools = [
+            Tool.function(lambda address: get_contract_info_as_text(address, rpc_url, block_number, chain, args), name="get_contract_info_as_text")
+        ]
         # start the llm converation
         conversation = model.conversation(tools=tools)
 

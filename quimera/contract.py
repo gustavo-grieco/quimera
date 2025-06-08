@@ -66,11 +66,12 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
         impl_raw = rpc_info.web3.eth.get_storage_at(target, IMPLEMENTATION_SLOT)
         implementation = "0x" + impl_raw[-20:].hex()
         if implementation != "0x0000000000000000000000000000000000000000":
-            target = implementation
-            target = to_checksum_address(target)
-            logger.log(INFO, f"Proxy detected, using target address {target}")
+            implementation = to_checksum_address(implementation)
+            logger.log(INFO, f"Proxy detected, using target address {implementation}")
+        else:
+            implementation = target
 
-        slither = Slither(chain + ":" + target, **vars(args))
+        slither = Slither(chain + ":" + implementation, **vars(args))
     else:
         slither = Slither(target, foundry_compile_all=True)
         base_contract = slither.get_contract_from_name("QuimeraBaseTest")
@@ -114,16 +115,6 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
         ]
         target_code = beautify(target_code, opts={"indent_size": 2, "preserve_newlines": False})
 
-    # if _contract.is_erc4626:
-    #    token_address = f"I{_contract.name}({target}).asset()"
-    if _contract.is_erc20:
-        token_address = f"{target}"
-    else:
-        logger.log(
-            WARNING, f"Contract {contract_name} is not an ERC20 or ERC4626 token."
-        )
-        token_address = f"{target}"
-
     interface = generate_interface(
         contract=_contract,
         unroll_structs=False,
@@ -136,7 +127,7 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
     private_variables_values = ""
     if "0x" in target:
         srs = SlitherReadStorage([_contract], max_depth=20, rpc_info=rpc_info)
-        srs.storage_address = target
+        srs.storage_address = implementation
 
         private_vars = []
         for var in _contract.state_variables:
@@ -160,6 +151,7 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
             private_variables_values += f"{var.name} = {var.value}\n"
 
     return {
+        "target_address": target,
         "interface": interface,
         "target_code": target_code,
         "private_variables_values": private_variables_values,
@@ -171,15 +163,13 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
 def get_contract_info_as_text(target, rpc_url, block_number, chain, args):
     contract_info = get_contract_info(target, rpc_url, block_number, chain, args)
     text = f"""
-    Contract Name: {contract_info['contract_name']}
-    Target Address: {contract_info['target_address']}
-    Implementation Address: {contract_info['implementation']}
-    Token Address: {contract_info['token_address']}
-    Interface:
+    The contract with address {contract_info['target']} has the following interface:
     {contract_info['interface']}
-    Target Code:
+    Its source code is:
+    ```solidity
     {contract_info['target_code']}
-    Private Variables Values:
+    ```
+    The contract has a number of private variables that are not accessible, these are their current values:
     {contract_info['private_variables_values']}
     """
     return text.strip()

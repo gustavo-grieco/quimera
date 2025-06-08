@@ -16,7 +16,8 @@ def get_async_response(conversation, prompt):
 
     async def fetch_response():
         response = ""
-        async for chunk in conversation.prompt(prompt):
+        response_obj = conversation.chain(prompt)
+        async for chunk in response_obj:
             print(chunk, end="", flush=True)
             response += chunk
         return response
