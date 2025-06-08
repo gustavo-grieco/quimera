@@ -237,6 +237,7 @@ constraints = """
 
 * Do NOT guess the internal behavior of the contract, instead use the information provided by the trace, which is always accurate.
 * Do NOT predict the trace output, you need to run the test and check the output.
+* Only use addresses provided in the contracts, never hardcoded from your memory.
 * Do NOT use SafeMath
 * Do NOT use low-level calls
 * Do NOT define additional contracts to deploy but you can use imported ones (e.g. ERC20Mock)
@@ -247,6 +248,7 @@ constraints = """
 * If available, use the `get_contract_source_info` tool to get the source code of a contract as well as additional information.
 * VERY IMPORTANT: only answer with the `executeExploit` function and optionally the `receive` function (if needed) or any external function for callbacks/reentrancy. Do NOT output the rest of the code.
 * VERY IMPORTANT: do NOT use any cheat code (e.g prank). You will disqualified if you do so.
+* If you want to simulate a EOA, use `vm.startPrank(address(this), address(this));` and `vm.stopPrank();` functions. These are the ONLY allowed cheatcodes.
 
 # Recommendations
 

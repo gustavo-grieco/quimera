@@ -17,7 +17,7 @@ solc-version = "0.8.20"
 optimizer = true
 optimizer_runs = 100000000
 via_ir = true
-evm_version = "shanghai"
+evm_version = "cancun"
 """
 
 def install_and_run_foundry(temp_dir, test_code, rpc_url) -> None:
