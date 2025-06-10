@@ -1,6 +1,6 @@
 # Quimera
 
-This is a basic tool that uses large language models (LLMs) to gradually discover smart contract exploits in Foundry by following these steps:
+This is exploit-generator that uses large language models (LLMs) to gradually discover smart contract exploits in Foundry by following these steps:
 
 1. Get the smart contract's source code and write a prompt that describes the goal of the exploit (e.g., the balance should increase after a flashloan).
 
@@ -10,7 +10,14 @@ This is a basic tool that uses large language models (LLMs) to gradually discove
 
 4. If it did, stop. If not, go back to step 2 and give the LLM the trace from the failed attempt to help it improve.
 
-**Current Status**: This is an experimental prototype. We’re still figuring out the best settings (like the right temperature), how to write better prompts, and what the tool is really capable of. Right now, it's focused on simple exploits involving token manipulation through Uniswap pairs. Follow the discussion on [the rediscovered exploits here](https://github.com/gustavo-grieco/quimera/issues/6).
+**Current Status**: This is an experimental prototype. We’re still figuring out the best settings (like the right temperature), how to write better prompts, and what the tool is really capable of. Here are the results so far re-discovering known exploits using [Gemini Pro 2.5 06-05](https://blog.google/products/gemini/gemini-2-5-pro-latest-preview/):
+
+| Exploit   | Complexity | Comments |
+|-----------|------------|----------|
+|[APEMAGA](https://github.com/SunWeb3Sec/DeFiHackLabs/blob/dc2cf9e53e9ccaf2eaf9806bad7cd914edefb41b/src/test/2024-06/APEMAGA_exp.sol#L23) | Low    | Only one step needed.|
+|[VISOR](https://github.com/SunWeb3Sec/DeFiHackLabs/blob/34cce572d25175ca915445f2ce7f7fbbb7cb593b/src/test/2021-12/Visor_exp.sol#L10)     | Low    | A few steps needed to build the WETH conversion calls, but overall the root cause is identified quickly. |
+| [FIRE](https://github.com/SunWeb3Sec/DeFiHackLabs/blob/b3738a7fdffa4b0fc5b34237e70eec2890e54878/src/test/2024-10/FireToken_exp.sol)     | Medium | It will first build the sequence of calls to exploit it, and then slowly adjust the amounts until profit is found. |
+| [Thunder-Loan](https://github.com/Cyfrin/2023-11-Thunder-Loan) | Low | This one is part of a CTF? |
 
 # Requirements
 
@@ -128,4 +135,4 @@ Logs:
 
 ```
 
-This exploit consumed a few thousands tokens and costed less than 2 USD.
+This exploit consumed a few thousands tokens and costed less than 1.25 USD.
