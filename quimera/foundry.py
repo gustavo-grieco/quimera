@@ -37,7 +37,9 @@ def extract_info_from_trace(trace: str) -> str:
             break
 
     # Join the extracted information into a single string
-    return "\n".join(extracted_info) if extracted_info else "No failure information found."
+    return (
+        "\n".join(extracted_info) if extracted_info else "No failure information found."
+    )
 
 
 foundry_toml = """
@@ -48,6 +50,7 @@ optimizer_runs = 100000000
 via_ir = true
 evm_version = "cancun"
 """
+
 
 def install_and_run_foundry(temp_dir, test_code, rpc_url) -> None:
     """Sets up a temporary directory for the tests"""

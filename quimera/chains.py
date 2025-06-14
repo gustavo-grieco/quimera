@@ -28,6 +28,7 @@ def get_valuable_token_address(name, chain):
     else:
         raise ValueError(f"Unsupported token name: {name}")
 
+
 def get_weth_address(chain):
     if chain == "mainnet":
         return "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"

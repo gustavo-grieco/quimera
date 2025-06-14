@@ -4,7 +4,6 @@ from datetime import datetime
 from signal import SIGINT, SIGTERM
 from subprocess import run
 from sys import platform
-from time import sleep
 
 
 def get_async_response(conversation, prompt, tools):
@@ -19,7 +18,7 @@ def get_async_response(conversation, prompt, tools):
         response = ""
         response_obj = conversation.chain(prompt, tools=tools)
         async for chunk in response_obj:
-            #print(chunk, end="", flush=True)
+            # print(chunk, end="", flush=True)
             response += chunk
         return response
 
@@ -36,6 +35,7 @@ def get_async_response(conversation, prompt, tools):
 
     return answer
 
+
 def get_sync_response(conversation, prompt, tools):
     """
     Get the response from the model synchronously.
@@ -46,9 +46,10 @@ def get_sync_response(conversation, prompt, tools):
     response = ""
     response_obj = conversation.chain(prompt, tools=tools)
     for chunk in response_obj:
-        #print(chunk, end="", flush=True)
+        # print(chunk, end="", flush=True)
         response += chunk
     return response
+
 
 def resolve_prompt(prompt):
     # Write prompt to tmp.txt
@@ -72,7 +73,7 @@ def resolve_prompt(prompt):
             "Your current prompt was copied to the clipboard. Delete everything (alt + t), paste the response here, save (ctrl + o) and exit (ctrl + x)"
         )
     assert False, "TODO"
-    #run(["nano", "/tmp/quimera.answer.txt"], check=True)
+    # run(["nano", "/tmp/quimera.answer.txt"], check=True)
 
     # Read the modified prompt
     with open("/tmp/quimera.answer.txt", "r") as file:

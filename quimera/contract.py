@@ -1,4 +1,4 @@
-from logging import getLogger, INFO, WARNING, ERROR
+from logging import getLogger, INFO, ERROR
 
 from eth_utils import to_checksum_address
 from jsbeautifier import beautify
@@ -16,12 +16,15 @@ IMPLEMENTATION_SLOT = (
     "0x360894A13BA1A3210667C828492DB98DCA3E2076CC3735A920A3CA505D382BBC"
 )
 
+
 def extract_contract_code_recursively(contract, visited):
     """
     Extracts the source code of a contract and its base contracts recursively.
     """
     print(f"Processing contract: {contract.name}")
-    code = contract.compilation_unit.core.source_code[contract.source_mapping.filename.absolute]
+    code = contract.compilation_unit.core.source_code[
+        contract.source_mapping.filename.absolute
+    ]
     code = beautify(code, opts={"indent_size": 2, "preserve_newlines": False})
 
     for base in contract.inheritance:
@@ -40,6 +43,7 @@ def extract_contract_code_recursively(contract, visited):
         code += "\n\n" + base_code
 
     return code
+
 
 def get_base_contract(target):
     Slither.logger.disabled = True
@@ -108,13 +112,17 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
     _contract = slither.get_contract_from_name(contract_name)[0]
 
     if len(_contract.compilation_unit.core.source_code) > 1:
-        target_code = extract_contract_code_recursively(_contract, set([_contract.name]))
+        target_code = extract_contract_code_recursively(
+            _contract, set([_contract.name])
+        )
     else:
         src_mapping = _contract.source_mapping
         target_code = _contract.compilation_unit.core.source_code[
             src_mapping.filename.absolute
         ]
-        target_code = beautify(target_code, opts={"indent_size": 2, "preserve_newlines": False})
+        target_code = beautify(
+            target_code, opts={"indent_size": 2, "preserve_newlines": False}
+        )
 
     interface = generate_interface(
         contract=_contract,
@@ -141,7 +149,11 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
             # if var.is_internal:
             if not (
                 isinstance(var.type, ElementaryType)
-                and ("uint" in var.type.name or var.type.name == "bool" or var.type.name == "address")
+                and (
+                    "uint" in var.type.name
+                    or var.type.name == "bool"
+                    or var.type.name == "address"
+                )
             ):
                 continue
 
@@ -168,13 +180,13 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
 def get_contract_info_as_text(target, rpc_url, block_number, chain, args):
     contract_info = get_contract_info(target, rpc_url, block_number, chain, args)
     text = f"""
-    The contract with address {contract_info['target']} has the following interface:
-    {contract_info['interface']}
+    The contract with address {contract_info["target"]} has the following interface:
+    {contract_info["interface"]}
     Its source code is:
     ```solidity
-    {contract_info['target_code']}
+    {contract_info["target_code"]}
     ```
     The contract has a number of private variables that are not accessible, these are their current values:
-    {contract_info['private_variables_values']}
+    {contract_info["private_variables_values"]}
     """
     return text.strip()
