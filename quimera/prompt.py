@@ -163,7 +163,10 @@ contract TestFlaw is Test {
         valuableToken.approve(target, type(uint256).max);
         //if (token != address(0))
         //    IERC20(token).approve(target, type(uint256).max);
+        setUniswapPair(token);
+    }
 
+    function setUniswapPair(address token) external {
         IUniswapV2Factory uniswapFactory = IUniswapV2Factory(uniswapRouter.factory());
         uniswapPair = IUniswapV2Pair(uniswapFactory.getPair(address(valuableToken), token));
 
@@ -181,7 +184,7 @@ contract TestFlaw is Test {
         uint112 reserve0;
         uint112 reserve1;
         (reserve0, reserve1, ) = uniswapPair.getReserves();
-        console.log("Uniswap reserves:");
+        console.log("Uniswap reserves for %s:", token);
         console.log("%d for %s", reserve0, token0);
         console.log("%d for %s", reserve1, token1);
     }
@@ -245,10 +248,9 @@ constraints = """
 * Do NOT use any private key operations (e.g. signing messages, etc.)
 * Do NOT try to re-initialize the contract, it will not work.
 * Do NOT try to exploit underflows or overflow conditions unless the contract is using Solidity < 0.8.0 or unchecked block. It will not work. However, unsafe casting is an issue for all versions.
-* Use the `get_contract_source_info` tool to get the source code of a contract as well as additional information.
-* Other tools available are `multiply_big_numbers`, `add_big_numbers`, `subtract_big_numbers`, `divide_big_numbers`. Use them to perform arithmetic operations, do NOT attempt to do it manually.
 * VERY IMPORTANT: only answer with the `executeExploit` function and optionally the `receive` function (if needed) or any external function for callbacks/reentrancy. Do NOT output the rest of the code.
 * VERY IMPORTANT: do NOT use any cheat code (e.g prank). You will disqualified if you do so.
+* VERY IMPORTANT: if an interface is not provided, but you still need to use it, you can use a low-level call to interact with the contract. Do not forget to check that the call returned successfully. If the call reverts without any reason, then it is likely that the interface is not correct.
 * If you want to simulate a EOA, use `vm.startPrank(address(this), address(this));` and `vm.stopPrank();` functions. These are the ONLY allowed cheatcodes.
 
 # Recommendations
@@ -260,7 +262,8 @@ constraints = """
 * Use `console.log` to query the state of the contracts, if needed.
 * Keep the control flow of the exploit simple: do not use if conditions, only sequences of calls.
 * Try using different functions of the target contracts and evaluate the effects to see if they are useful for the exploit.
-* If the uniswap pair is not initially available and you need it, try to find a suitable token and query the Uniswap factory to get the pair address.
+* If the uniswap pair is not initially available and you need it, try to find a suitable token and query the Uniswap factory to get the pair address. Do NOT forget to call approve on the token for the router before using it.
+* If transferFrom fails, try to use the approve function first.
 """
 
 initial_prompt_template = """
@@ -277,8 +280,8 @@ This issue allows a user to start with a certain amount of //$valuableTokenName,
 //$targetCode
 ```
 
-The contract has a number of private variables that are not accessible, these are their current values:
-//$privateVariablesValues
+The contract has a number of public/private variables, these are their current values:
+//$variablesValues
 
 # Test code to execute the exploit
 

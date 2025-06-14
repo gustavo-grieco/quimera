@@ -11,6 +11,35 @@ def escape_ansi(line):
     return ansi_escape.sub("", line)
 
 
+def extract_info_from_trace(trace: str) -> str:
+    """
+    Extracts the reason for the failure from the trace output.
+    It can be a reverted transaction or a compilation failure.
+    :param trace: The trace output as a string.
+    :return: The extracted information as a string.
+    """
+    # Split the trace into lines
+    lines = trace.split("\n")
+    # Initialize an empty list to store the extracted information
+    extracted_info = []
+
+    # Iterate through each line in the trace
+    for line in lines:
+        # Check if the line contains a failure message
+        if "[FAIL:" in line:
+            line = line.split("[FAIL:")[1]
+            line = line.split("]")[0]
+            extracted_info.append(line.strip())
+            break
+
+        if "Compilation failed" in line:
+            extracted_info.append("Compilation failed.")
+            break
+
+    # Join the extracted information into a single string
+    return "\n".join(extracted_info) if extracted_info else "No failure information found."
+
+
 foundry_toml = """
 [profile.default]
 solc-version = "0.8.20"

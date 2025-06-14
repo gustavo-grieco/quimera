@@ -42,6 +42,7 @@ def extract_contract_code_recursively(contract, visited):
     return code
 
 def get_base_contract(target):
+    Slither.logger.disabled = True
     slither = Slither(target, foundry_compile_all=True)
     base_contract = slither.get_contract_from_name("QuimeraBaseTest")
     if base_contract == []:
@@ -130,37 +131,35 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
 
     interface = interface.replace(history, "")
 
-    private_variables_values = ""
+    variables_values = ""
     if "0x" in target:
         srs = SlitherReadStorage([_contract], max_depth=20, rpc_info=rpc_info)
         srs.storage_address = implementation
 
-        private_vars = []
+        contract_vars = []
         for var in _contract.state_variables:
             # if var.is_internal:
             if not (
                 isinstance(var.type, ElementaryType)
-                and var.type.name in ["uint256", "bool"]
+                and ("uint" in var.type.name or var.type.name == "bool" or var.type.name == "address")
             ):
                 continue
 
-            if var.visibility == "public":
-                continue
-            private_vars.append(var.name)
+            contract_vars.append(var.name)
 
         read_storage.logger.disabled = True
-        srs.get_all_storage_variables(lambda x: x.name in private_vars)
+        srs.get_all_storage_variables(lambda x: x.name in contract_vars)
         srs.get_target_variables()
         srs.walk_slot_info(srs.get_slot_values)
 
         for var in srs.slot_info.values():
-            private_variables_values += f"{var.name} = {var.value}\n"
+            variables_values += f"{var.name} = {var.value}\n"
 
     return {
         "target_address": target,
         "interface": interface,
         "target_code": target_code,
-        "private_variables_values": private_variables_values,
+        "variables_values": variables_values,
         "contract_name": contract.name,
         "is_erc20": _contract.is_erc20,
     }

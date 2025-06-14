@@ -4,9 +4,10 @@ from datetime import datetime
 from signal import SIGINT, SIGTERM
 from subprocess import run
 from sys import platform
+from time import sleep
 
 
-def get_async_response(conversation, prompt):
+def get_async_response(conversation, prompt, tools):
     """
     Get the response from the model asynchronously.
     :param model: The model to use for the response.
@@ -16,9 +17,9 @@ def get_async_response(conversation, prompt):
 
     async def fetch_response():
         response = ""
-        response_obj = conversation.chain(prompt)
+        response_obj = conversation.chain(prompt, tools=tools)
         async for chunk in response_obj:
-            print(chunk, end="", flush=True)
+            #print(chunk, end="", flush=True)
             response += chunk
         return response
 
@@ -35,6 +36,19 @@ def get_async_response(conversation, prompt):
 
     return answer
 
+def get_sync_response(conversation, prompt, tools):
+    """
+    Get the response from the model synchronously.
+    :param conversation: The conversation object to use for the response.
+    :param prompt: The prompt to send to the model.
+    :return: The response from the model.
+    """
+    response = ""
+    response_obj = conversation.chain(prompt, tools=tools)
+    for chunk in response_obj:
+        #print(chunk, end="", flush=True)
+        response += chunk
+    return response
 
 def resolve_prompt(prompt):
     # Write prompt to tmp.txt
@@ -57,7 +71,8 @@ def resolve_prompt(prompt):
         file.write(
             "Your current prompt was copied to the clipboard. Delete everything (alt + t), paste the response here, save (ctrl + o) and exit (ctrl + x)"
         )
-    run(["nano", "/tmp/quimera.answer.txt"], check=True)
+    assert False, "TODO"
+    #run(["nano", "/tmp/quimera.answer.txt"], check=True)
 
     # Read the modified prompt
     with open("/tmp/quimera.answer.txt", "r") as file:
@@ -82,8 +97,8 @@ def save_prompt_response(prompt, response, temp_dir):
         timestamp_file.write(datetime.now().isoformat())
 
 
-def get_response(conversation, prompt):
+def get_response(conversation, prompt, tools):
     if conversation is None:
         return resolve_prompt(prompt)
     else:
-        return get_async_response(conversation, prompt)
+        return get_sync_response(conversation, prompt, tools)
