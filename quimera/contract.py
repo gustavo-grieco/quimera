@@ -179,14 +179,17 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
 
 def get_contract_info_as_text(target, rpc_url, block_number, chain, args):
     contract_info = get_contract_info(target, rpc_url, block_number, chain, args)
-    text = f"""
-    The contract with address {contract_info["target"]} has the following interface:
-    {contract_info["interface"]}
-    Its source code is:
-    ```solidity
-    {contract_info["target_code"]}
-    ```
-    The contract has a number of private variables that are not accessible, these are their current values:
-    {contract_info["private_variables_values"]}
-    """
+    text = f"""The contract with address {contract_info["target_address"]} contains a {contract_info["contract_name"]} contract with the following interface:
+
+{contract_info["interface"]}
+
+Its source code is:
+
+```solidity
+{contract_info["target_code"]}
+```
+
+The contract has a number of public/private variables, these are their current values:
+{contract_info["variables_values"]}"""
+    assert False
     return text.strip()

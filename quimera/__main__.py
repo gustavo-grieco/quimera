@@ -7,11 +7,14 @@ from signal import signal, SIGINT, SIGTERM
 from argparse import ArgumentParser, Namespace
 from logging import basicConfig, getLogger, INFO, ERROR
 from os import getenv
-from sys import exit
+from sys import exit, __stderr__
+from traceback import print_exc
 from pathlib import Path
 from random import randint
 from time import sleep
 from shutil import which
+
+from textual import log
 
 from llm import get_model
 from llm.errors import ModelError
@@ -33,6 +36,7 @@ from quimera.prompt import (
     initial_execute_exploit_function,
     test_contract_template,
     constraints,
+    parse_response,
 )
 
 from quimera.foundry import (
@@ -115,7 +119,9 @@ def run_main_task(message_queue, shutdown_flag):
         )
         controller.run_main_task()
     except Exception as e:
-        print(f"Main task process error: {e}")
+        print(f"Main task process error: {e}", file=__stderr__)
+        print_exc(file=__stderr__)
+        __stderr__.flush()
 
 
 class MainTaskController:
@@ -208,11 +214,8 @@ class MainTaskController:
         pass  # log(level, message)
 
     def run_main_task(self):
-        try:
-            self.main()
-        except Exception as e:
-            logger.log(ERROR, f"An error occurred in the main task: {e}")
-            self.shutdown_task()
+        self.main()
+        #self.shutdown_task()
 
     def main(self):
         args = parse_args()
@@ -316,6 +319,8 @@ class MainTaskController:
         else:
             args["assignTokenAddress"] = ""
 
+        args["additionalInterfaces"] = ""
+        args["additionalContracts"] = ""
         args["executeExploitCall"] = "executeExploit(amount);"
 
         args["flashloanCall"] = get_flashloan_call(chain)
@@ -369,7 +374,7 @@ class MainTaskController:
                     lambda address: get_contract_info_as_text(
                         address, rpc_url, block_number, chain, args
                     ),
-                    name="get_contract_info_as_text",
+                    name="fetch_contract_source_code",
                 ),
                 Tool.function(lambda x, y: x * y, name="multiply_big_numbers"),
                 Tool.function(lambda x, y: x + y, name="add_big_numbers"),
@@ -415,13 +420,15 @@ class MainTaskController:
                     except KeyboardInterrupt:
                         self.shutdown_task()
 
-            args["executeExploitCode"] = response.strip()
-            if "```" in args["executeExploitCode"]:
-                args["executeExploitCode"] = args["executeExploitCode"].replace(
-                    "solidity", ""
-                )
-                # Remove the code block markers
-                args["executeExploitCode"] = args["executeExploitCode"].split("```")[1]
+            # merge args and parsed_response
+            args.update(parse_response(response))
+            #args["executeExploitCode"] = parsed_response["executeExploitCode"].strip()
+            #if "```" in args["executeExploitCode"]:
+            #    args["executeExploitCode"] = args["executeExploitCode"].replace(
+            ##        "solidity", ""
+            #    )
+            #    # Remove the code block markers
+            #    args["executeExploitCode"] = args["executeExploitCode"].split("```")[1]
 
             self.create_file_from_main("", args["executeExploitCode"])
             test_code = SolidityTemplate(exploit_template).substitute(args)
@@ -487,10 +494,11 @@ def main():
     controller.setup_signal_handlers()
 
     # Start main task in background
-    try:
-        controller.start_background_task()
-    except Exception as e:
-        assert False, f"Failed to start main task: {e}"
+    #try:
+    controller.start_background_task()
+    #except Exception as e:
+    #    logger.log(ERROR, f"Failed to start main task: {e}")
+    #    assert False, f"Failed to start main task: {e}"
 
     # Run UI in main process
     controller.run_ui()

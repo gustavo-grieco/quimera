@@ -1,9 +1,6 @@
-initial_execute_exploit_function = """
-    function executeExploit(uint256 amount) internal {}
-"""
+initial_execute_exploit_function = """function executeExploit(uint256 amount) internal {}"""
 
-test_contract_template = """
-// SPDX-License-Identifier: UNLICENSED
+test_contract_template = """// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
@@ -136,6 +133,8 @@ interface IDODO {
 
 //$interface
 
+//$additionalInterfaces
+
 contract TestFlaw is Test {
     address internal target;
     address internal token0;
@@ -146,7 +145,29 @@ contract TestFlaw is Test {
     IERC20 private valuableToken;
     address private flashloanProvider;
 
+    function setUniswapPair(address addr) public {
+        IUniswapV2Factory uniswapFactory = IUniswapV2Factory(uniswapRouter.factory());
+        uniswapPair = IUniswapV2Pair(uniswapFactory.getPair(address(valuableToken), addr));
 
+        if (address(uniswapPair) == address(0)) {
+            console.log("Uniswap pair not found.");
+            return;
+        }
+
+        token0 = uniswapPair.token0();
+        token1 = uniswapPair.token1();
+
+        valuableToken.approve(address(uniswapRouter), type(uint256).max);
+        IERC20(addr).approve(address(uniswapRouter), type(uint256).max);
+
+        uint112 reserve0;
+        uint112 reserve1;
+        (reserve0, reserve1, ) = uniswapPair.getReserves();
+        console.log("Uniswap reserves for %s:", addr);
+        console.log("%d for %s", reserve0, token0);
+        console.log("%d for %s", reserve1, token1);
+    }
+    
     function setUp() public {
 
         //$assignTargetAddress
@@ -164,29 +185,6 @@ contract TestFlaw is Test {
         //if (token != address(0))
         //    IERC20(token).approve(target, type(uint256).max);
         setUniswapPair(token);
-    }
-
-    function setUniswapPair(address token) external {
-        IUniswapV2Factory uniswapFactory = IUniswapV2Factory(uniswapRouter.factory());
-        uniswapPair = IUniswapV2Pair(uniswapFactory.getPair(address(valuableToken), token));
-
-        if (address(uniswapPair) == address(0)) {
-            console.log("Uniswap pair not found.");
-            return;
-        }
-
-        token0 = uniswapPair.token0();
-        token1 = uniswapPair.token1();
-
-        valuableToken.approve(address(uniswapRouter), type(uint256).max);
-        IERC20(token).approve(address(uniswapRouter), type(uint256).max);
-
-        uint112 reserve0;
-        uint112 reserve1;
-        (reserve0, reserve1, ) = uniswapPair.getReserves();
-        console.log("Uniswap reserves for %s:", token);
-        console.log("%d for %s", reserve0, token0);
-        console.log("%d for %s", reserve1, token1);
     }
 
     function testFlaw() external {
@@ -233,11 +231,14 @@ contract TestFlaw is Test {
 
     //$executeExploitCode
 }
+
+//$additionalContracts
 """
 
 constraints = """
 # Constraints
 
+* If you do not have the source code already available, start fetching the source code of the contracts involved, using their addresses. You should do this at any time when you discover a new address that you need to interact to.
 * Do NOT guess the internal behavior of the contract, instead use the information provided by the trace, which is always accurate.
 * Do NOT predict the trace output, you need to run the test and check the output.
 * Only use addresses provided in the contracts, never hardcoded from your memory.
@@ -248,10 +249,19 @@ constraints = """
 * Do NOT use any private key operations (e.g. signing messages, etc.)
 * Do NOT try to re-initialize the contract, it will not work.
 * Do NOT try to exploit underflows or overflow conditions unless the contract is using Solidity < 0.8.0 or unchecked block. It will not work. However, unsafe casting is an issue for all versions.
-* VERY IMPORTANT: only answer with the `executeExploit` function and optionally the `receive` function (if needed) or any external function for callbacks/reentrancy. Do NOT output the rest of the code.
 * VERY IMPORTANT: do NOT use any cheat code (e.g prank). You will disqualified if you do so.
-* VERY IMPORTANT: if an interface is not provided, but you still need to use it, you can use a low-level call to interact with the contract. Do not forget to check that the call returned successfully. If the call reverts without any reason, then it is likely that the interface is not correct.
 * If you want to simulate a EOA, use `vm.startPrank(address(this), address(this));` and `vm.stopPrank();` functions. These are the ONLY allowed cheatcodes.
+
+# Output Format
+
+You should output different sections using the following tags:
+- `<executeExploitCode>`: the code of the `executeExploit` function, which is the main function to exploit the flaw as well as any additional function needed (e.g. for callbacks or reentrancy).
+- `<additionalInterfaces>`: any additional interface you need to use, if not provided.
+- `<additionalContracts>`: any additional contract you need to use, if not provided.
+
+* These tags should be used, at most, a single time. The `executeExploitCode` section is mandatory, while the others are optional. 
+* Only use `additionalInterfaces` and `additionalContracts` if you absolutely need to define new interfaces or contracts, otherwise do not use them.
+* Do NOT output the rest of the code, only answer with the format requested.
 
 # Recommendations
 
@@ -263,13 +273,12 @@ constraints = """
 * Keep the control flow of the exploit simple: do not use if conditions, only sequences of calls.
 * Try using different functions of the target contracts and evaluate the effects to see if they are useful for the exploit.
 * If the uniswap pair is not initially available and you need it, try to find a suitable token and query the Uniswap factory to get the pair address. Do NOT forget to call approve on the token for the router before using it.
-* If transferFrom fails, try to use the approve function first.
+* If `transferFrom` reverts, try to use the `approve` function first.
 """
 
-initial_prompt_template = """
-# Instructions
+initial_prompt_template = """# Instructions
 
-We are going to reproduce a Solidity smart contract issue step by step targetting //$targetAddress which contains a //$targetContractName contract.
+We are going to reproduce a Solidity smart contract issue step by step targeting //$targetAddress which contains a //$targetContractName contract.
 The goal is to incrementally modifying a Foundry test according to the information produced during its execution (e.g. a trace) until we can reproduce the issue.
 This issue allows a user to start with a certain amount of //$valuableTokenName, perform some operations using the contract (or other related ones), and then obtain more //$valuableTokenName than the initial one.
 
@@ -294,8 +303,7 @@ And the first Foundry trace is this one:
 //$trace
 ```"""
 
-next_prompt_template = """
-The result of the last execution is:
+next_prompt_template = """The result of the last execution is:
 ```
 //$trace
 ```
@@ -303,3 +311,30 @@ Please improve the `executeExploit` function to fix the issue and make it work (
 
 //$constraints
 """
+
+def parse_response(response: str) -> dict:
+    """
+    Parses the LLM response to extract the sections descripted in the prompt as HTML-like tags (e.g. <X>...</X>).
+    This should carefully handle tags which can be in any part of the line.
+    """
+    sections = {"executeExploitCode": "", "additionalInterfaces": "", "additionalContracts": ""}
+
+    # Only parse the sections in `sections`
+    for section in sections.keys():
+        start_tag = f"<{section}>"
+        end_tag = f"</{section}>"
+        start_index = response.find(start_tag)
+        end_index = response.find(end_tag)
+
+        if start_index != -1 and end_index != -1:
+            content = response[start_index + len(start_tag):end_index].strip()
+            sections[section] = content
+    # Remove the tags from the content
+    for section in sections:
+        sections[section] = sections[section].replace(f"<{section}>", "").replace(f"</{section}>", "").strip()
+
+    # Remove ``` and ```solidity from the content
+    for section in sections:
+        sections[section] = sections[section].replace("```solidity", "").replace("```", "").strip()
+
+    return sections
