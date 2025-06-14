@@ -19,6 +19,10 @@ This is exploit-generator that uses large language models (LLMs) to gradually di
 | [FIRE](https://github.com/SunWeb3Sec/DeFiHackLabs/blob/b3738a7fdffa4b0fc5b34237e70eec2890e54878/src/test/2024-10/FireToken_exp.sol)     | Medium | It will first build the sequence of calls to exploit it, and then slowly adjust the amounts until profit is found. |
 | [Thunder-Loan](https://github.com/Cyfrin/2023-11-Thunder-Loan) | Low | This one is part of a CTF? |
 
+# Demo
+
+![Demo](https://i.imgur.com/3Xw7vb8.gif)
+
 # Requirements
 
 * You will need an RPC provider (e.g. Alchemy) and an Etherscan API key. Both have free options.
@@ -43,7 +47,6 @@ llm install llm-ollama
 Note that in "manual mode", there is no need to install any plugin as the user will be copying and pasting the prompt and responses.
 
 **Important**: when using an LLM to test with an already known exploit, make sure the web search is not enabled, otherwise they can will have access to the original exploit code.
-
 
 # Getting started
 
