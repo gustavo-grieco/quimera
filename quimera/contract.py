@@ -9,7 +9,7 @@ from slither.tools.read_storage.read_storage import SlitherReadStorage, RpcInfo
 from slither.utils.code_generation import generate_interface
 from slither.core.solidity_types.elementary_type import ElementaryType
 
-logger = getLogger(__name__)
+logger = getLogger("Quimera")
 
 # EIP-1967 implementation slot (minus 1 and hashed)
 IMPLEMENTATION_SLOT = (
@@ -21,20 +21,20 @@ def extract_contract_code_recursively(contract, visited):
     """
     Extracts the source code of a contract and its base contracts recursively.
     """
-    print(f"Processing contract: {contract.name}")
+    logger.log(INFO, f"Processing contract: {contract.name}")
     code = contract.compilation_unit.core.source_code[
         contract.source_mapping.filename.absolute
     ]
     code = beautify(code, opts={"indent_size": 2, "preserve_newlines": False})
 
     for base in contract.inheritance:
-        print(f"Processing base contract: {base.name}")
+        logger.log(INFO, f"Processing base contract: {base.name}")
         if base.name in visited:
-            print(f"Skipping already visited base contract: {base.name}")
+            logger.log(INFO, f"Skipping already visited base contract: {base.name}")
             continue
 
         if base.is_interface:
-            print(f"Skipping interface base contract: {base.name}")
+            logger.log(INFO, f"Skipping interface base contract: {base.name}")
             continue
 
         visited.add(base.name)
@@ -146,18 +146,22 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
 
         contract_vars = []
         for var in _contract.state_variables:
-            # if var.is_internal:
-            if not (
-                isinstance(var.type, ElementaryType)
-                and (
-                    "uint" in var.type.name
-                    or var.type.name == "bool"
-                    or var.type.name == "address"
-                )
+            keep = False
+            if isinstance(var.type, ElementaryType) and (
+                "uint" in var.type.name
+                or var.type.name == "bool"
+                or var.type.name == "address"
             ):
+                keep = True
+
+            if "mapping" in str(var.type):
                 continue
 
-            contract_vars.append(var.name)
+            if not isinstance(var.type, ElementaryType) and var.type.type == "Contract":
+                keep = True
+
+            if keep:
+                contract_vars.append(var.name)
 
         read_storage.logger.disabled = True
         srs.get_all_storage_variables(lambda x: x.name in contract_vars)

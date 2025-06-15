@@ -1,4 +1,6 @@
-initial_execute_exploit_function = """function executeExploit(uint256 amount) internal {}"""
+initial_execute_exploit_function = (
+    """function executeExploit(uint256 amount) internal {}"""
+)
 
 test_contract_template = """// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
@@ -312,12 +314,17 @@ Please improve the `executeExploit` function to fix the issue and make it work (
 //$constraints
 """
 
+
 def parse_response(response: str) -> dict:
     """
     Parses the LLM response to extract the sections descripted in the prompt as HTML-like tags (e.g. <X>...</X>).
     This should carefully handle tags which can be in any part of the line.
     """
-    sections = {"executeExploitCode": "", "additionalInterfaces": "", "additionalContracts": ""}
+    sections = {
+        "executeExploitCode": "",
+        "additionalInterfaces": "",
+        "additionalContracts": "",
+    }
 
     # Only parse the sections in `sections`
     for section in sections.keys():
@@ -327,14 +334,21 @@ def parse_response(response: str) -> dict:
         end_index = response.find(end_tag)
 
         if start_index != -1 and end_index != -1:
-            content = response[start_index + len(start_tag):end_index].strip()
+            content = response[start_index + len(start_tag) : end_index].strip()
             sections[section] = content
     # Remove the tags from the content
     for section in sections:
-        sections[section] = sections[section].replace(f"<{section}>", "").replace(f"</{section}>", "").strip()
+        sections[section] = (
+            sections[section]
+            .replace(f"<{section}>", "")
+            .replace(f"</{section}>", "")
+            .strip()
+        )
 
     # Remove ``` and ```solidity from the content
     for section in sections:
-        sections[section] = sections[section].replace("```solidity", "").replace("```", "").strip()
+        sections[section] = (
+            sections[section].replace("```solidity", "").replace("```", "").strip()
+        )
 
     return sections

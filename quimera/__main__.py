@@ -5,7 +5,7 @@ from multiprocessing import set_start_method, Event, Queue, Process
 from signal import signal, SIGINT, SIGTERM
 
 from argparse import ArgumentParser, Namespace
-from logging import basicConfig, getLogger, INFO, ERROR
+from logging import basicConfig, getLogger, INFO, ERROR, FileHandler, Formatter
 from os import getenv
 from sys import exit, __stderr__
 from traceback import print_exc
@@ -14,7 +14,6 @@ from random import randint
 from time import sleep
 from shutil import which
 
-from textual import log
 
 from llm import get_model
 from llm.errors import ModelError
@@ -99,7 +98,7 @@ def parse_args() -> Namespace:
     )
 
     parser.add_argument(
-        "--working-directory",
+        "--working-dir",
         help="The working directory to use for the project",
         type=str,
         default="/tmp",
@@ -154,11 +153,13 @@ class MainTaskController:
         self.message_queue.put({"type": msg_type, "data": data})
 
     def update_main_task_status(self, status: str):
+        logger.log(INFO, f"Main task status: {status}")
         """Update main task status in UI"""
         self.send_message("status", status)
 
     def set_blocker(self, blocker: str):
         """Set a blocker message in UI"""
+        logger.log(INFO, f"Blocker: {blocker}")
         self.send_message("blocker", blocker)
 
     def update_editor_status(self, status: str):
@@ -215,13 +216,21 @@ class MainTaskController:
 
     def run_main_task(self):
         self.main()
-        #self.shutdown_task()
+        # self.shutdown_task()
 
     def main(self):
         args = parse_args()
+        self.working_directory = args.working_dir
+
+        logger.propagate = False
+        file_handler = FileHandler(
+            Path(self.working_directory, "quimera.log"), mode="w"
+        )
+        formatter = Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
         self.update_main_task_status("Starting Quimera... 🔱")
 
-        self.working_directory = args.working_directory
         installed = check_commands_installed(["forge"])
         for cmd, installed in installed.items():
             if not installed:
@@ -362,7 +371,6 @@ class MainTaskController:
         self.set_blocker(extract_info_from_trace(args["trace"]))
         prompt = SolidityTemplate(initial_prompt_template).substitute(args)
         save_prompt_response(prompt, None, temp_dir)
-        # assert False
 
         model = None
         tools = []
@@ -385,9 +393,7 @@ class MainTaskController:
 
         profit_found = False
         for iteration in range(1, max_iterations + 1):
-            # logger.log(INFO, f"Iteration {iteration}")
-            # logger.log(INFO, f"Prompt: {prompt}")
-            # logger.log(INFO, "Getting response from model...")
+            logger.log(INFO, f"Prompt: {prompt}")
             response = None
 
             while response is None:
@@ -422,14 +428,6 @@ class MainTaskController:
 
             # merge args and parsed_response
             args.update(parse_response(response))
-            #args["executeExploitCode"] = parsed_response["executeExploitCode"].strip()
-            #if "```" in args["executeExploitCode"]:
-            #    args["executeExploitCode"] = args["executeExploitCode"].replace(
-            ##        "solidity", ""
-            #    )
-            #    # Remove the code block markers
-            #    args["executeExploitCode"] = args["executeExploitCode"].split("```")[1]
-
             self.create_file_from_main("", args["executeExploitCode"])
             test_code = SolidityTemplate(exploit_template).substitute(args)
             args["testCode"] = test_code
@@ -459,13 +457,12 @@ class MainTaskController:
 
             self.set_blocker(extract_info_from_trace(args["trace"]))
             save_prompt_response(prompt, response, temp_dir)
-            # logger.log(INFO, f"Trace/output: {args['trace']}")
+            logger.log(INFO, f"Trace/output: {args['trace']}")
             if (
                 "Suite result: FAILED" in args["trace"]
                 or "Compiler run failed" in args["trace"]
             ):
-                pass
-                # logger.log(INFO, "Test failed, continuing to next iteration...")
+                logger.log(INFO, "Test failed, continuing to next iteration...")
             elif "[PASS] testFlaw()" in args["trace"]:
                 profit_found = True
                 self.update_main_task_status(
@@ -494,11 +491,8 @@ def main():
     controller.setup_signal_handlers()
 
     # Start main task in background
-    #try:
+    # try:
     controller.start_background_task()
-    #except Exception as e:
-    #    logger.log(ERROR, f"Failed to start main task: {e}")
-    #    assert False, f"Failed to start main task: {e}"
 
     # Run UI in main process
     controller.run_ui()
