@@ -3,7 +3,7 @@ from subprocess import run
 from re import compile
 from logging import getLogger, INFO
 
-logger = getLogger(__name__)
+logger = getLogger("Quimera")
 
 
 def escape_ansi(line):
