@@ -23,11 +23,11 @@ class BackgroundTextEditor(App):
         border-right: solid $primary;
         scrollbar-size: 0 0;
     }
-    
+
     TextArea {
         border: solid $primary;
     }
-    
+
     .top-status-bar {
         dock: top;
         height: 3;
@@ -35,7 +35,7 @@ class BackgroundTextEditor(App):
         border-bottom: solid $primary;
         padding: 0;
     }
-    
+
     .status-widget {
         width: 1fr;
         height: 100%;
@@ -44,11 +44,11 @@ class BackgroundTextEditor(App):
         content-align: center middle;
         text-align: center;
     }
-    
+
     .status-widget:last-child {
         border-right: none;
     }
-    
+
     .bottom-status-bar {
         dock: bottom;
         height: 1;
@@ -78,6 +78,9 @@ class BackgroundTextEditor(App):
         self.main_task_status = "Waiting"
         self.network_information = "No network info"
         self.start_time = datetime.now()
+
+        self.waiting_for_user_input = False  # Flag to check if waiting for user input
+        self.user_confirmed_answer = False  # Flag to check if user confirmed answer
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -161,15 +164,19 @@ class BackgroundTextEditor(App):
         """Update editor with file from background process"""
         try:
             path = Path(file_path)
-            with open(path, "w") as f:
-                f.write(content)
+            content = None
+            with open(path, "r") as f:
+                content = f.read(content)
 
-            # If this file is currently open, reload it
-            if self.current_file_path == path:
-                editor = self.query_one("#editor", TextArea)
-                editor.text = content
-                self.original_content = content
-                self.file_saved = True
+            editor = self.query_one("#editor", TextArea)
+            editor.text = content
+            editor.read_only = False
+            self.original_content = content
+            self.file_saved = True
+            self.current_file_path = path
+            editor.focus()
+            self._update_status_display()
+
         except Exception as e:
             self.current_blocker = f"File update error: {str(e)}"
 

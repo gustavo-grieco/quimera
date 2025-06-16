@@ -43,7 +43,8 @@ from quimera.foundry import (
     copy_and_run_foundry,
     extract_info_from_trace,
 )
-from quimera.model import get_response, save_prompt_response
+from quimera.model import save_prompt_response, resolve_prompt, get_sync_response
+
 from quimera.contract import (
     get_contract_info,
     get_contract_info_as_text,
@@ -211,9 +212,6 @@ class MainTaskController:
         signal(SIGINT, signal_handler)
         signal(SIGTERM, signal_handler)
 
-    def log(self, level: int, message: str):
-        pass  # log(level, message)
-
     def run_main_task(self):
         self.main()
         # self.shutdown_task()
@@ -279,7 +277,7 @@ class MainTaskController:
                     "Please set the FOUNDRY_FORK_BLOCK_NUMBER or specify it with --block-number argument."
                 )
             else:
-                self.log(
+                logger.log(
                     INFO,
                     f"Using block number {block_number} from environment variable.",
                 )
@@ -307,6 +305,7 @@ class MainTaskController:
         args["interface"] = contract_info["interface"]
         args["targetCode"] = contract_info["target_code"]
         args["targetAddress"] = contract_info["target_address"]
+        args["chain"] = chain
         args["targetContractName"] = contract_info["contract_name"]
 
         args["constraints"] = constraints.replace(
@@ -398,19 +397,15 @@ class MainTaskController:
 
             while response is None:
                 try:
-                    if model == "manual":
+                    if model_name == "manual":
                         self.update_main_task_status(
                             f"Waiting for user input... ☎️ ({iteration}/{max_iterations})"
-                        )
-                        self.create_file_from_main(
-                            "/tmp/quimera.prompt.txt",
-                            "Your current prompt was copied to the clipboard. Delete everything (alt + t), paste the response here, save (ctrl + o) and exit (ctrl + x)",
                         )
                     else:
                         self.update_main_task_status(
                             f"Waiting response from LLM 🧠 ({iteration}/{max_iterations})"
                         )
-                    response = get_response(conversation, prompt, tools)
+                    response = self.get_response(conversation, prompt, tools)
                 except ModelError as e:
                     self.update_main_task_status(
                         f"Error getting response from model: {e} ❌ ({iteration}/{max_iterations})"
@@ -478,6 +473,31 @@ class MainTaskController:
 
         if not profit_found:
             self.shutdown_task()
+
+    def get_response(self, conversation, prompt, tools):
+        if conversation is None:
+            instructions = resolve_prompt(prompt, self.working_directory)
+            # Wait until user edits the prompt
+            self.create_file_from_main(
+                Path(self.working_directory, "quimera.answer.txt"), ""
+            )
+
+            modified = False
+            while not modified:
+                logger.log(INFO, "Waiting for user to edit the prompt...")
+                sleep(0.5)
+                answer = ""
+                with open(
+                    Path(self.working_directory, "quimera.answer.txt"), "r"
+                ) as file:
+                    answer = file.read()
+
+                if answer != instructions:
+                    modified = True
+
+            return answer
+        else:
+            return get_sync_response(conversation, prompt, tools)
 
 
 def main():

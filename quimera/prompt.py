@@ -169,7 +169,7 @@ contract TestFlaw is Test {
         console.log("%d for %s", reserve0, token0);
         console.log("%d for %s", reserve1, token1);
     }
-    
+
     function setUp() public {
 
         //$assignTargetAddress
@@ -262,7 +262,7 @@ You should output different sections using the following tags:
 - `<additionalInterfaces>`: any additional interface you need to use, if not provided.
 - `<additionalContracts>`: any additional contract you need to use, if not provided.
 
-* These tags should be used, at most, a single time. The `executeExploitCode` section is mandatory, while the others are optional. 
+* These tags should be used, at most, a single time. The `executeExploitCode` section is mandatory, while the others are optional.
 * Only use `additionalInterfaces` and `additionalContracts` if you absolutely need to define new interfaces or contracts, otherwise do not use them.
 * Do NOT output the rest of the code, only answer with the format requested.
 
@@ -281,7 +281,7 @@ You should output different sections using the following tags:
 
 initial_prompt_template = """# Instructions
 
-We are going to reproduce a Solidity smart contract issue step by step targeting //$targetAddress which contains a //$targetContractName contract.
+We are going to reproduce a Solidity smart contract issue step by step targeting //$targetAddress in the //$chain chain which contains a //$targetContractName contract.
 The goal is to incrementally modifying a Foundry test according to the information produced during its execution (e.g. a trace) until we can reproduce the issue.
 This issue allows a user to start with a certain amount of //$valuableTokenName, perform some operations using the contract (or other related ones), and then obtain more //$valuableTokenName than the initial one.
 

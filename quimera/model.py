@@ -4,6 +4,8 @@ from datetime import datetime
 from signal import SIGINT, SIGTERM
 from subprocess import run
 from sys import platform
+from pathlib import Path
+from shutil import copyfile
 
 
 def get_async_response(conversation, prompt, tools):
@@ -51,33 +53,37 @@ def get_sync_response(conversation, prompt, tools):
     return response
 
 
-def resolve_prompt(prompt):
+def resolve_prompt(prompt, working_dir):
     # Write prompt to tmp.txt
-    with open("/tmp/quimera.prompt.txt", "w") as file:
+    with open(Path(working_dir, "quimera.prompt.txt"), "w") as file:
         file.write(prompt)
 
     # Open nano to edit the prompt
     if platform == "darwin":
+        if working_dir != "/tmp":
+            copyfile(Path(working_dir, "quimera.prompt.txt"), "/tmp/quimera.prompt.txt")
         # In general, shell=True is not recommended, but here only we use it to pipe the content to pbcopy (there is no other way)
         run("cat /tmp/quimera.prompt.txt | pbcopy", shell=True)
     elif platform == "linux":
         run(
-            ["xclip", "-selection", "clipboard", "-in", "/tmp/quimera.prompt.txt"],
+            [
+                "xclip",
+                "-selection",
+                "clipboard",
+                "-in",
+                Path(working_dir, "quimera.prompt.txt"),
+            ],
             check=True,
         )
     else:
         raise ValueError("Unsupported platform.")
-    # overwrite the prompt with instructions
-    with open("/tmp/quimera.answer.txt", "w") as file:
-        file.write(
-            "Your current prompt was copied to the clipboard. Delete everything (alt + t), paste the response here, save (ctrl + o) and exit (ctrl + x)"
-        )
-    assert False, "TODO"
-    # run(["nano", "/tmp/quimera.answer.txt"], check=True)
 
-    # Read the modified prompt
-    with open("/tmp/quimera.answer.txt", "r") as file:
-        return file.read()
+    instructions = "Your current prompt was copied to the clipboard. Delete everything (ctrl + x), paste the response here and confirm (ctrl + c)"
+    # overwrite the prompt with instructions
+    with open(Path(working_dir, "quimera.answer.txt"), "w") as file:
+        file.write(instructions)
+
+    return instructions
 
 
 def save_prompt_response(prompt, response, temp_dir):
@@ -96,10 +102,3 @@ def save_prompt_response(prompt, response, temp_dir):
     # save date and time in a timestamp.txt file
     with open(temp_dir / "timestamp.txt", "w", encoding="utf-8") as timestamp_file:
         timestamp_file.write(datetime.now().isoformat())
-
-
-def get_response(conversation, prompt, tools):
-    if conversation is None:
-        return resolve_prompt(prompt)
-    else:
-        return get_sync_response(conversation, prompt, tools)
