@@ -213,8 +213,7 @@ contract TestFlaw is Test {
         uint256[] memory,
         bytes memory
     ) external {
-        uint256 amount = amounts[0];
-        flashLoanInternal(amount);
+        flashLoanInternal(amounts[0]);
     }
 
     // Used by DODO
@@ -225,7 +224,12 @@ contract TestFlaw is Test {
     function flashLoanInternal(uint256 amount) internal {
         //$executeExploitCall
 
-        console.log("Current valuable balance: %s", valuableToken.balanceOf(address(this)));
+        uint256 currentValuableBalance = valuableToken.balanceOf(address(this));
+        if (amount >= currentValuableBalance) {
+            console.log("Current valuable balance: %s", valuableToken.balanceOf(address(this)));
+            console.log("Current profit: %s", int256(currentValuableBalance) - int256(amount));
+            revert("Not enough valuableToken balance to produce profit");
+        }
         valuableToken.transfer(flashloanProvider, amount);
         uint256 surplusInValuable = valuableToken.balanceOf(address(this));
         console.log("Surplus: %s", surplusInValuable);

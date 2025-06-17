@@ -32,7 +32,7 @@ def get_async_response(conversation, prompt, tools):
     try:
         answer = loop.run_until_complete(main_task)
     except asyncio.CancelledError:
-        print("Execution interrupted by user.")
+        logger.log(INFO, "Execution interrupted by user.")
         exit(1)
 
     return answer

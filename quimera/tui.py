@@ -9,9 +9,8 @@ from pathlib import Path
 from datetime import datetime
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.widgets import TextArea, Header, Static, DirectoryTree
+from textual.widgets import TextArea, Header, Static, DirectoryTree, Footer
 from textual.binding import Binding
-
 
 class BackgroundTextEditor(App):
     """Text editor that runs in main process."""
@@ -60,8 +59,8 @@ class BackgroundTextEditor(App):
 
     BINDINGS = [
         Binding("ctrl+q", "quit", "Quit", priority=True),
-        Binding("ctrl+s", "save_file", "Save"),
-        Binding("ctrl+n", "new_file", "New"),
+        Binding("ctrl+s", "save_file", "Save and confirm"),
+        Binding("ctrl+c", "clear_file", "Clear editor"),
     ]
 
     def __init__(self, message_queue=None, directory_tree_path="."):
@@ -102,9 +101,9 @@ class BackgroundTextEditor(App):
             yield DirectoryTree(str(self.directory_tree_path), id="tree")
             with Vertical():
                 yield TextArea("", language="solidity", id="editor")
+                yield Footer()
 
         yield Static("", classes="bottom-status-bar", id="bottom-status")
-        # yield Footer()
 
     def on_mount(self) -> None:
         self.theme = "textual-dark"
@@ -239,11 +238,12 @@ class BackgroundTextEditor(App):
                 self.original_content = editor.text
                 self.file_saved = True
                 self.current_status = "Saved"
+                editor.text = ""
                 self._update_status_display()
             except Exception as e:
                 self.current_blocker = f"Save error: {str(e)}"
 
-    def action_new_file(self) -> None:
+    def action_clear_file(self) -> None:
         editor = self.query_one("#editor", TextArea)
         editor.text = ""
         editor.cursor_location = (0, 0)
