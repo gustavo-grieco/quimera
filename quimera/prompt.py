@@ -245,7 +245,7 @@ contract TestFlaw is Test {
 constraints = """
 # Constraints
 
-* If you do not have the source code already available, start fetching the source code of the contracts involved, using their addresses. You should do this at any time when you discover a new address that you need to interact to.
+* VERY IMPORTANT: If you do not have the source code already available, start fetching the source code of the contracts involved, using their addresses. You should do this at any time when you discover a new address or token that you need to interact to.
 * Do NOT guess the internal behavior of the contract, instead use the information provided by the trace, which is always accurate.
 * Do NOT predict the trace output, you need to run the test and check the output.
 * Only use addresses provided in the contracts, never hardcoded from your memory.

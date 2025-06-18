@@ -6,7 +6,10 @@ from subprocess import run
 from sys import platform
 from pathlib import Path
 from shutil import copyfile
+from logging import getLogger, INFO
 
+logger = getLogger("Quimera")
+logger.setLevel(INFO)
 
 def get_async_response(conversation, prompt, tools):
     """
@@ -46,10 +49,11 @@ def get_sync_response(conversation, prompt, tools):
     :return: The response from the model.
     """
     response = ""
-    response_obj = conversation.chain(prompt, tools=tools)
-    for chunk in response_obj:
-        # print(chunk, end="", flush=True)
-        response += chunk
+    chain = conversation.chain(prompt, tools=tools)
+    for response_obj in chain.responses():
+        logger.log(INFO, response_obj.tool_calls())
+        for chunk in response_obj:
+            response += chunk
     return response
 
 

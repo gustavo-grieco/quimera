@@ -63,6 +63,7 @@ def get_base_contract(target):
     ]
     return base_code
 
+source_code_cache = {}
 
 def get_contract_info(target, rpc_url, block_number, chain, args):
     if "0x" in target:
@@ -77,6 +78,8 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
             implementation = target
 
         slither = Slither(chain + ":" + implementation, **vars(args))
+        global source_code_cache
+        source_code_cache[target] = "Already part of the original instructions, not requesting again."
     else:
         slither = Slither(target, foundry_compile_all=True)
         base_contract = slither.get_contract_from_name("QuimeraBaseTest")
@@ -129,7 +132,7 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
         unroll_structs=False,
         include_events=False,
         include_errors=False,
-        include_enums=False,
+        include_enums=True,
         include_structs=True,
     )
 
@@ -180,8 +183,14 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
         "is_erc20": _contract.is_erc20,
     }
 
-
 def get_contract_info_as_text(target, rpc_url, block_number, chain, args):
+    logger.log(INFO, f"Executing get_contract_info_as_text for address {target}")
+    global source_code_cache
+    if target in source_code_cache:
+        logger.log(INFO, "Using cached contract info.")
+        return source_code_cache[target]
+
+    source_code_cache[target] = "Already requested, not requesting again."
     contract_info = get_contract_info(target, rpc_url, block_number, chain, args)
     text = f"""The contract with address {contract_info["target_address"]} contains a {contract_info["contract_name"]} contract with the following interface:
 
@@ -195,5 +204,5 @@ Its source code is:
 
 The contract has a number of public/private variables, these are their current values:
 {contract_info["variables_values"]}"""
-    assert False
+    logger.log(INFO, "Contract info text generated successfully.")
     return text.strip()

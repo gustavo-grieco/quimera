@@ -217,8 +217,8 @@ class MainTaskController:
         # self.shutdown_task()
 
     def main(self):
-        args = parse_args()
-        self.working_directory = args.working_dir
+        args_parsed = parse_args()
+        self.working_directory = args_parsed.working_dir
 
         logger.propagate = False
         file_handler = FileHandler(
@@ -239,10 +239,10 @@ class MainTaskController:
                 exit(1)
 
         self.set_blocker("Waiting for network")
-        target = args.contract_source
-        valuable_token = args.valuable_token.lower()
-        model_name = args.model
-        max_iterations = args.iterations
+        target = args_parsed.contract_source
+        valuable_token = args_parsed.valuable_token.lower()
+        model_name = args_parsed.model
+        max_iterations = args_parsed.iterations
 
         chain = "mainnet"
         if "0x" in target:
@@ -268,7 +268,7 @@ class MainTaskController:
             )
 
         # get the block timestamp
-        block_number = args.block_number
+        block_number = args_parsed.block_number
         if block_number is None:
             block_number = getenv("FOUNDRY_FORK_BLOCK_NUMBER")
 
@@ -297,7 +297,7 @@ class MainTaskController:
             rpc_url,
             block_number,
             chain,
-            args,
+            args_parsed,
         )
 
         target = contract_info["target_address"]
@@ -371,21 +371,19 @@ class MainTaskController:
         prompt = SolidityTemplate(initial_prompt_template).substitute(args)
         save_prompt_response(prompt, None, temp_dir)
 
+        def fetch_contract_source_code(address):
+            """Fetch contract source code as text"""
+            return get_contract_info_as_text(
+                address, rpc_url, block_number, chain, args_parsed
+            )
+
         model = None
         tools = []
         conversation = None
         if model_name != "manual":
             model = get_model(model_name)  # get_async_model(name=model_name)
             tools = [
-                Tool.function(
-                    lambda address: get_contract_info_as_text(
-                        address, rpc_url, block_number, chain, args
-                    ),
-                    name="fetch_contract_source_code",
-                ),
-                Tool.function(lambda x, y: x * y, name="multiply_big_numbers"),
-                Tool.function(lambda x, y: x + y, name="add_big_numbers"),
-                Tool.function(lambda x, y: x - y, name="subtract_big_numbers"),
+                Tool.function(fetch_contract_source_code),
             ]
             # start the llm converation
             conversation = model.conversation(tools=tools)
