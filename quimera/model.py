@@ -51,7 +51,7 @@ def get_sync_response(conversation, prompt, tools):
     response = ""
     chain = conversation.chain(prompt, tools=tools)
     for response_obj in chain.responses():
-        logger.log(INFO, response_obj.tool_calls())
+        logger.log(INFO, f"Tool requests: {response_obj.tool_calls()}")
         for chunk in response_obj:
             response += chunk
     return response

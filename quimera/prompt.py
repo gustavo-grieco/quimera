@@ -281,11 +281,13 @@ You should output different sections using the following tags:
 * Try using different functions of the target contracts and evaluate the effects to see if they are useful for the exploit.
 * If the uniswap pair is not initially available and you need it, try to find a suitable token and query the Uniswap factory to get the pair address. Do NOT forget to call approve on the token for the router before using it.
 * If `transferFrom` reverts, try to use the `approve` function first.
+* If the target contract requires to use an address as paramter, try to see if you can use the address of the contract itself (e.g. address(this)), or the address of the test contract you deploy. If it is not validated, you can probably exploit it.
 """
 
 initial_prompt_template = """# Instructions
 
-We are going to reproduce a Solidity smart contract issue step by step targeting //$targetAddress in the //$chain chain which contains a //$targetContractName contract.
+We are going to reproduce a Solidity smart contract issue step by step related with //$targetAddress and/or one of the "linked" contracts (e.g tokens, staking, etc) in the //$chain chain which contains a deployment of the //$targetContractName contract.
+Before starting, please read the provided code, fetch related contracts using addresses (use the Foundry traces to get the values) and request their source code to understand how they work and where the issue is.
 The goal is to incrementally modifying a Foundry test according to the information produced during its execution (e.g. a trace) until we can reproduce the issue.
 This issue allows a user to start with a certain amount of //$valuableTokenName, perform some operations using the contract (or other related ones), and then obtain more //$valuableTokenName than the initial one.
 

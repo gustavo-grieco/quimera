@@ -196,7 +196,7 @@ class MainTaskController:
                 self.task_process.terminate()
                 self.task_process.join()
 
-        self.exit(0)
+        exit(0)
 
     def setup_signal_handlers(self):
         """Setup signal handlers in main process"""
@@ -221,6 +221,8 @@ class MainTaskController:
         self.working_directory = args_parsed.working_dir
 
         logger.propagate = False
+        # Create working directory if it doesn't exist
+        Path(self.working_directory).mkdir(parents=True, exist_ok=True)
         file_handler = FileHandler(
             Path(self.working_directory, "quimera.log"), mode="w"
         )
@@ -299,6 +301,13 @@ class MainTaskController:
             chain,
             args_parsed,
         )
+        if contract_info == {}:
+            logger.log(
+                ERROR,
+                f"Error fetching contract information for {target} at block {block_number}.",
+            )
+            self.shutdown_task()
+            return # Should be unreachable, but just in case
 
         target = contract_info["target_address"]
         args = {}

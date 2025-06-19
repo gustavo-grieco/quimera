@@ -2,6 +2,7 @@ from logging import getLogger, INFO, ERROR
 
 from eth_utils import to_checksum_address
 from jsbeautifier import beautify
+from requests.exceptions import HTTPError
 
 from slither import Slither
 from slither.tools.read_storage import read_storage
@@ -77,7 +78,21 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
         else:
             implementation = target
 
-        slither = Slither(chain + ":" + implementation, **vars(args))
+        try:
+            slither = Slither(chain + ":" + implementation, **vars(args))
+            logger.log(INFO, slither)
+        except HTTPError as e:
+            logger.log(
+                ERROR,
+                f"Error fetching source code for {target} at block {block_number}: {e}",
+            )
+            return {}
+        except ValueError:
+            logger.log(
+                ERROR,
+                f"Error fetching source code for {target} at block {block_number}",
+            )
+            return {}
         global source_code_cache
         source_code_cache[target] = "Already part of the original instructions, not requesting again."
     else:
@@ -192,6 +207,11 @@ def get_contract_info_as_text(target, rpc_url, block_number, chain, args):
 
     source_code_cache[target] = "Already requested, not requesting again."
     contract_info = get_contract_info(target, rpc_url, block_number, chain, args)
+    if contract_info == {}:
+        source_code_cache[target] = (
+            "No source code available for the provided address. This address contains either an EOA or a contract without source code available"
+        )
+        return source_code_cache[target]
     text = f"""The contract with address {contract_info["target_address"]} contains a {contract_info["contract_name"]} contract with the following interface:
 
 {contract_info["interface"]}
