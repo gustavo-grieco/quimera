@@ -246,9 +246,10 @@ constraints = """
 # Constraints
 
 * VERY IMPORTANT: If you do not have the source code already available, start fetching the source code of the contracts involved, using their addresses. You should do this at any time when you discover a new address or token that you need to interact to.
+* VERY IMPORTANT: Only use addresses fetched from the target contracts state, new deployment or `address(this)`. Never use hardcoded addresses or invent new ones. 
+* VERY IMPORTANT: do NOT use any cheat code (e.g prank). You will disqualified if you do so.
 * Do NOT guess the internal behavior of the contract, instead use the information provided by the trace, which is always accurate.
 * Do NOT predict the trace output, you need to run the test and check the output.
-* Only use addresses provided in the contracts, never hardcoded from your memory.
 * Do NOT use SafeMath
 * Do NOT use low-level calls
 * Do NOT define additional contracts to deploy but you can use imported ones (e.g. ERC20Mock)
@@ -256,7 +257,6 @@ constraints = """
 * Do NOT use any private key operations (e.g. signing messages, etc.)
 * Do NOT try to re-initialize the contract, it will not work.
 * Do NOT try to exploit underflows or overflow conditions unless the contract is using Solidity < 0.8.0 or unchecked block. It will not work. However, unsafe casting is an issue for all versions.
-* VERY IMPORTANT: do NOT use any cheat code (e.g prank). You will disqualified if you do so.
 * If you want to simulate a EOA, use `vm.startPrank(address(this), address(this));` and `vm.stopPrank();` functions. These are the ONLY allowed cheatcodes.
 
 # Output Format
