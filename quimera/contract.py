@@ -30,6 +30,12 @@ def extract_contract_code_recursively(contract, visited):
 
     for base in contract.inheritance:
         logger.log(INFO, f"Processing base contract: {base.name}")
+
+        if base.name in ["Context", "Ownable", "Pausable", "AccessControl", "ReentrancyGuard"]:
+            logger.log(INFO, f"Skipping {base.name} base contract.")
+            visited.add(base.name)
+            continue
+
         if base.name in visited:
             logger.log(INFO, f"Skipping already visited base contract: {base.name}")
             continue
@@ -42,6 +48,30 @@ def extract_contract_code_recursively(contract, visited):
 
         base_code = extract_contract_code_recursively(base, visited)
         code += "\n\n" + base_code
+
+    for library in contract.all_library_calls:
+        logger.log(INFO, f"Processing library: {library.destination}")
+        if library.destination in visited:
+            logger.log(INFO, f"Skipping already visited library: {library.destination}")
+            continue
+
+        if library.destination.name == "Strings":
+            logger.log(INFO, "Skipping Strings library.")
+            continue
+        if library.destination.name == "Address":
+            logger.log(INFO, "Skipping Address library.")
+            continue
+        if library.destination.name == "SafeMath":
+            logger.log(INFO, "Skipping SafeMath library.")
+            continue
+        if library.destination.name == "SafeERC20":
+            logger.log(INFO, "Skipping SafeERC20 library.")
+            continue
+
+        visited.add(library.destination)
+
+        library_code = extract_contract_code_recursively(library.destination, visited)
+        code += "\n\n" + library_code
 
     return code
 

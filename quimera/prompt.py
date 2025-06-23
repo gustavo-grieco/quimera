@@ -251,6 +251,7 @@ constraints = """
 * Do NOT guess the internal behavior of the contract, instead use the information provided by the trace, which is always accurate.
 * Do NOT predict the trace output, you need to run the test and check the output.
 * Do NOT use SafeMath
+* Do NOT try a reentrancy attack if a function is using `nonReentrant` modifier, it will not work. You can still call other functions without this modifier or any other functions from any related contracts.
 * Do NOT use low-level calls
 * Do NOT define additional contracts to deploy but you can use imported ones (e.g. ERC20Mock)
 * Do NOT use third-parties during exploit (e.g. the owner doing something for you). You can still pass other contracts or EOA addresses as parameters to the exploit if needed.
