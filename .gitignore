@@ -1,5 +1,6 @@
 crytic-export
 mainnet.sh
+arbitrum.sh
 bsc.sh
 
 # Byte-compiled / optimized / DLL files

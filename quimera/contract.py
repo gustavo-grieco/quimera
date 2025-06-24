@@ -9,6 +9,7 @@ from slither.tools.read_storage import read_storage
 from slither.tools.read_storage.read_storage import SlitherReadStorage, RpcInfo
 from slither.utils.code_generation import generate_interface
 from slither.core.solidity_types.elementary_type import ElementaryType
+from slither.core.declarations.contract import Contract
 
 logger = getLogger("Quimera")
 
@@ -195,6 +196,9 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
         contract_vars = []
         for var in _contract.state_variables:
             keep = False
+            if "mapping" in str(var.type):
+                continue
+
             if isinstance(var.type, ElementaryType) and (
                 "uint" in var.type.name
                 or var.type.name == "bool"
@@ -202,10 +206,7 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
             ):
                 keep = True
 
-            if "mapping" in str(var.type):
-                continue
-
-            if not isinstance(var.type, ElementaryType) and var.type.type == "Contract":
+            if type(var.type.type) == Contract:
                 keep = True
 
             if keep:
@@ -224,7 +225,7 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
         "interface": interface,
         "target_code": target_code,
         "variables_values": variables_values,
-        "contract_name": contract.name,
+        "contract_name": _contract.name,
         "is_erc20": _contract.is_erc20,
     }
 

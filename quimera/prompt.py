@@ -302,6 +302,8 @@ This issue allows a user to start with a certain amount of //$valuableTokenName,
 The contract has a number of public/private variables, these are their current values:
 //$variablesValues
 
+If these addresses above are relevant for the exploit, you must ask for their source code and understand how they work.
+
 # Test code to execute the exploit
 
 ```
