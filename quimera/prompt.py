@@ -246,7 +246,7 @@ constraints = """
 # Constraints
 
 * VERY IMPORTANT: If you do not have the source code already available, start fetching the source code of the contracts involved, using their addresses. You should do this at any time when you discover a new address or token that you need to interact to.
-* VERY IMPORTANT: Only use addresses fetched from the target contracts state, new deployment or `address(this)`. Never use hardcoded addresses or invent new ones. 
+* VERY IMPORTANT: Only use addresses fetched from the target contracts state, new deployment or `address(this)`. Never use hardcoded addresses or invent new ones.
 * VERY IMPORTANT: do NOT use any cheat code (e.g prank). You will disqualified if you do so.
 * Do NOT guess the internal behavior of the contract, instead use the information provided by the trace, which is always accurate.
 * Do NOT predict the trace output, you need to run the test and check the output.
@@ -268,6 +268,7 @@ You should output different sections using the following tags:
 - `<additionalContracts>`: any additional contract you need to use, if not provided.
 
 * These tags should be used, at most, a single time. The `executeExploitCode` section is mandatory, while the others are optional.
+* Do NOT forget to close the tags with `</executeExploitCode>`, `</additionalInterfaces>` and `</additionalContracts>`.
 * Only use `additionalInterfaces` and `additionalContracts` if you absolutely need to define new interfaces or contracts, otherwise do not use them.
 * Do NOT output the rest of the code, only answer with the format requested.
 
