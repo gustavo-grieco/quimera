@@ -191,7 +191,7 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
     variables_values = ""
     if "0x" in target:
         srs = SlitherReadStorage([_contract], max_depth=20, rpc_info=rpc_info)
-        srs.storage_address = implementation
+        srs.storage_address = target
 
         contract_vars = []
         for var in _contract.state_variables:
@@ -218,7 +218,10 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
         srs.walk_slot_info(srs.get_slot_values)
 
         for var in srs.slot_info.values():
-            variables_values += f"{var.name} = {var.value}\n"
+            if var.size == 160: # A dirty trick to detect addresses
+                variables_values += f"{var.name} = 0x{var.value}\n"
+            else:
+                variables_values += f"{var.name} = {var.value}\n"
 
     return {
         "target_address": target,
