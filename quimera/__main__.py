@@ -17,7 +17,7 @@ from shutil import which
 
 from llm import get_model
 from llm.errors import ModelError
-from llm import Tool
+from llm import Tool, Attachment
 
 from quimera.tui import BackgroundTextEditor
 from quimera.template import SolidityTemplate
@@ -96,6 +96,12 @@ def parse_args() -> Namespace:
         help="The maximum time in seconds the model can take to generate a response",
         type=int,
         default=0,
+    )
+    parser.add_argument(
+        "--attachment",
+        help="Path to a text document to send to the model",
+        type=str,
+        default=None,
     )
 
     parser.add_argument(
@@ -219,6 +225,21 @@ class MainTaskController:
     def main(self):
         args_parsed = parse_args()
         self.working_directory = args_parsed.working_dir
+
+        if args_parsed.attachment is not None:
+            if not args_parsed.attachment.endswith(".txt"):
+                logger.log(
+                    ERROR,
+                    "Attachment document must be a text file ending with .txt",
+                )
+                exit(1)
+
+            if not Path(args_parsed.attachment).exists():
+                logger.log(
+                    ERROR,
+                    f"Attachment document {args_parsed.attachment} does not exist.",
+                )
+                exit(1)
 
         logger.propagate = False
         # Create working directory if it doesn't exist
@@ -388,12 +409,17 @@ class MainTaskController:
 
         model = None
         tools = []
+        attachments = []
         conversation = None
         if model_name != "manual":
             model = get_model(model_name)  # get_async_model(name=model_name)
             tools = [
                 Tool.function(fetch_contract_source_code),
             ]
+
+            if args_parsed.attachment is not None:
+                attachments.append(Attachment(path=args_parsed.attachment))
+
             # start the llm converation
             conversation = model.conversation(tools=tools)
 
@@ -412,7 +438,9 @@ class MainTaskController:
                         self.update_main_task_status(
                             f"Waiting response from LLM 🧠 ({iteration}/{max_iterations})"
                         )
-                    response = self.get_response(conversation, prompt, tools)
+                    if (iteration > 1):
+                        attachments = []
+                    response = self.get_response(conversation, prompt, tools, attachments)
                 except ModelError as e:
                     self.update_main_task_status(
                         f"Error getting response from model: {e} ❌ ({iteration}/{max_iterations})"
@@ -481,7 +509,7 @@ class MainTaskController:
         if not profit_found:
             self.shutdown_task()
 
-    def get_response(self, conversation, prompt, tools):
+    def get_response(self, conversation, prompt, tools, attachments):
         if conversation is None:
             instructions = resolve_prompt(prompt, self.working_directory)
             # Wait until user edits the prompt
@@ -504,7 +532,7 @@ class MainTaskController:
 
             return answer
         else:
-            return get_sync_response(conversation, prompt, tools)
+            return get_sync_response(conversation, prompt, tools, attachments)
 
 
 def main():

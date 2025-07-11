@@ -41,7 +41,7 @@ def get_async_response(conversation, prompt, tools):
     return answer
 
 
-def get_sync_response(conversation, prompt, tools):
+def get_sync_response(conversation, prompt, tools, attachments):
     """
     Get the response from the model synchronously.
     :param conversation: The conversation object to use for the response.
@@ -49,7 +49,7 @@ def get_sync_response(conversation, prompt, tools):
     :return: The response from the model.
     """
     response = ""
-    chain = conversation.chain(prompt, tools=tools)
+    chain = conversation.chain(prompt, tools=tools, attachments=attachments)
     for response_obj in chain.responses():
         logger.log(INFO, f"Tool requests: {response_obj.tool_calls()}")
         for chunk in response_obj:

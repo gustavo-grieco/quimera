@@ -258,6 +258,7 @@ constraints = """
 * Do NOT use any private key operations (e.g. signing messages, etc.)
 * Do NOT try to re-initialize the contract, it will not work.
 * Do NOT try to exploit underflows or overflow conditions unless the contract is using Solidity < 0.8.0 or unchecked block. It will not work. However, unsafe casting is an issue for all versions.
+* You SHOULD use at least 10 ether of liquidity. If the pair to swap tokens have low liquidity, you SHOULD find a alternative way to obtain tokens (e.g. look how they are minted).
 * If you want to simulate a EOA, use `vm.startPrank(address(this), address(this));` and `vm.stopPrank();` functions. These are the ONLY allowed cheatcodes.
 
 # Output Format

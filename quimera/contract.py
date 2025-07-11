@@ -32,7 +32,7 @@ def extract_contract_code_recursively(contract, visited):
     for base in contract.inheritance:
         logger.log(INFO, f"Processing base contract: {base.name}")
 
-        if base.name in ["Context", "Ownable", "Pausable", "AccessControl", "ReentrancyGuard"]:
+        if base.name in ["Context", "Ownable", "Pausable", "AccessControl", "ReentrancyGuard", "EIP712", "ERC20Permit"]:
             logger.log(INFO, f"Skipping {base.name} base contract.")
             visited.add(base.name)
             continue
@@ -56,17 +56,9 @@ def extract_contract_code_recursively(contract, visited):
             logger.log(INFO, f"Skipping already visited library: {library.destination}")
             continue
 
-        if library.destination.name == "Strings":
-            logger.log(INFO, "Skipping Strings library.")
-            continue
-        if library.destination.name == "Address":
-            logger.log(INFO, "Skipping Address library.")
-            continue
-        if library.destination.name == "SafeMath":
-            logger.log(INFO, "Skipping SafeMath library.")
-            continue
-        if library.destination.name == "SafeERC20":
-            logger.log(INFO, "Skipping SafeERC20 library.")
+        if library.destination.name in ["Strings", "Address", "SafeMath", "SafeERC20", "ShortStrings", "ECDSA"]:
+            logger.log(INFO, f"Skipping library: {library.destination.name}")
+            visited.add(library.destination.name)
             continue
 
         visited.add(library.destination)
@@ -187,6 +179,7 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
     }"""
 
     interface = interface.replace(history, "")
+    interface = interface.replace("function collateralConfig() external returns (CollateralConfig memory);", "")
 
     variables_values = ""
     if "0x" in target:
