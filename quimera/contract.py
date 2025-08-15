@@ -52,7 +52,7 @@ def extract_contract_code_recursively(contract, visited):
 
     for library in contract.all_library_calls:
         logger.log(INFO, f"Processing library: {library.destination}")
-        if library.destination in visited:
+        if library.destination.name in visited:
             logger.log(INFO, f"Skipping already visited library: {library.destination}")
             continue
 
@@ -61,7 +61,7 @@ def extract_contract_code_recursively(contract, visited):
             visited.add(library.destination.name)
             continue
 
-        visited.add(library.destination)
+        visited.add(library.destination.name)
 
         library_code = extract_contract_code_recursively(library.destination, visited)
         code += "\n\n" + library_code
@@ -152,9 +152,10 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
     logger.info(f"Contracts found: {contracts_names}, selected {contract_name}")
     _contract = slither.get_contract_from_name(contract_name)[0]
 
+    internal_contracts = set([_contract.name])
     if len(_contract.compilation_unit.core.source_code) > 1:
         target_code = extract_contract_code_recursively(
-            _contract, set([_contract.name])
+            _contract, internal_contracts
         )
     else:
         src_mapping = _contract.source_mapping
@@ -186,25 +187,29 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
         srs = SlitherReadStorage([_contract], max_depth=20, rpc_info=rpc_info)
         srs.storage_address = target
 
-        contract_vars = []
-        for var in _contract.state_variables:
-            keep = False
-            if "mapping" in str(var.type):
-                continue
+        contract_vars = set()
+        logger.log(INFO, internal_contracts)
+        for contract_name in internal_contracts:
+            contract = slither.get_contract_from_name(contract_name)[0]
+            for var in contract.state_variables:
+                keep = False
+                if "mapping" in str(var.type):
+                    continue
 
-            if isinstance(var.type, ElementaryType) and (
-                "uint" in var.type.name
-                or var.type.name == "bool"
-                or var.type.name == "address"
-            ):
-                keep = True
+                if isinstance(var.type, ElementaryType) and (
+                    "uint" in var.type.name
+                    or var.type.name == "bool"
+                    or var.type.name == "address"
+                ):
+                    keep = True
 
-            if type(var.type.type) == Contract:
-                keep = True
+                if type(var.type.type) == Contract:
+                    keep = True
 
-            if keep:
-                contract_vars.append(var.name)
+                if keep:
+                    contract_vars.add(var.name)
 
+        logger.log(INFO, contract_vars)
         read_storage.logger.disabled = True
         srs.get_all_storage_variables(lambda x: x.name in contract_vars)
         srs.get_target_variables()
@@ -212,7 +217,7 @@ def get_contract_info(target, rpc_url, block_number, chain, args):
 
         for var in srs.slot_info.values():
             if var.size == 160: # A dirty trick to detect addresses
-                variables_values += f"{var.name} = 0x{var.value}\n"
+                variables_values += f"{var.name} = 0x{var.value}\n".replace("0x0x", "0x")
             else:
                 variables_values += f"{var.name} = {var.value}\n"
 
