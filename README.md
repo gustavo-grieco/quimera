@@ -1,4 +1,5 @@
 # Quimera
+<a href="https://www.drips.network/app/projects/github/gustavo-grieco/quimera" target="_blank"><img src="https://www.drips.network/api/embed/project/https%3A%2F%2Fgithub.com%2Fgustavo-grieco%2Fquimera/support.png?background=light&style=github&text=me&stat=support" alt="Support quimera on drips.network" height="20"></a>
 
 This is exploit-generator that uses large language models (LLMs) to gradually discover smart contract exploits in Foundry by following these steps:
 
