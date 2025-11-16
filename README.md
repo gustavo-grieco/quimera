@@ -69,3 +69,5 @@ Quimera can work with either deployed contracts (using Etherscan to fetch the so
 # Related Work
 
 [AI Agent Smart Contract Exploit Generation](https://arxiv.org/abs/2507.05558): an approach very close to Quimera, even sharing some of the exploits rediscovered here.
+
+[PoCo: Agentic Proof-of-Concept Exploit Generation for Smart Contracts](https://arxiv.org/abs/2511.02780): similar to off-chain Quimera, it generates PoCs in Foundry based on auditors' annotations.
